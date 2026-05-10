@@ -2,8 +2,29 @@ ATCoder　ABCのB~C,Dレベルの問題を作成。
 
 タイトル・問題文（問題・入力形式・出力形式・サンプルケース・制約条件）・模範解答コード・テストケース（ATCoderのように提出時に判定するための隠しテストケース）
 
+
+サンプルケースは表示するため、問題文でよいが、テストケースは提出時に判定するためのもので、問題文には表示しない。
+問題文はMarkdown形式
+問題文には、()内の要素をすべて入れること。
 問題文はmd, $で囲んでlatexで数式が表現できる。
 
 B+くらいが50ポイントくらいで、
 Aが10くらい。
 難度によってポイントが変わる。
+
+一括インポート
+AI生成JSONを貼り付け
+
+例:
+[
+  {
+    "title": "A + B 問題",
+    "statement": "## 問題\n整数 A, B を受け取り、A+B を出力せよ。\n## サンプル入力 1\n```\n1 2\n```\n## サンプル出力 1\n```\n3\n```",
+    "solutionCode": "#include<bits/stdc++.h>\nusing namespace std;\nint main(){int a,b;cin>>a>>b;cout<<a+b;}",
+    "timeLimitMs": 2000,
+    "points": 100,
+    "testcases": [
+      { "input": "1 2\n", "expectedOutput": "3\n" }
+    ]
+  }
+]
