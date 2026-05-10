@@ -1,3 +1,4 @@
+import { ArrowRight } from "lucide-react";
 import Link from "next/link";
 import { GlobalNav } from "@/components/nav/GlobalNav";
 
@@ -79,22 +80,11 @@ export default async function EventsPage() {
                       >
                         {statusLabel}
                       </span>
-                      <svg
+                      <ArrowRight
                         aria-hidden="true"
-                        width="16"
-                        height="16"
-                        viewBox="0 0 16 16"
-                        fill="none"
-                        className="text-rp-600 group-hover:text-rp-400 transition-colors"
-                      >
-                        <path
-                          d="M4 8h8M8 4l4 4-4 4"
-                          stroke="currentColor"
-                          strokeWidth="1.4"
-                          strokeLinecap="round"
-                          strokeLinejoin="round"
-                        />
-                      </svg>
+                        size={16}
+                        className="text-rp-600 transition-colors group-hover:text-rp-400"
+                      />
                     </div>
                   </Link>
                 );

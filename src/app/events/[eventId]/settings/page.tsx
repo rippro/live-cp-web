@@ -1,5 +1,6 @@
 "use client";
 
+import { Save } from "lucide-react";
 import { useParams } from "next/navigation";
 import { useEffect, useState } from "react";
 import { useAuth } from "@/contexts/AuthContext";
@@ -94,7 +95,13 @@ export default function SettingsPage() {
           </div>
           {canEdit && (
             <div className="flex items-center gap-3 pt-2">
-              <button type="button" onClick={save} disabled={saving} className="btn-primary">
+              <button
+                type="button"
+                onClick={save}
+                disabled={saving}
+                className="btn-primary inline-flex items-center gap-1.5"
+              >
+                <Save aria-hidden="true" size={15} />
                 {saving ? "保存中..." : "変更を保存"}
               </button>
               {msg && (

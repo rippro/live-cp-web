@@ -1,13 +1,18 @@
 "use client";
 
+import { LogOut, Moon, Plus, Sun, Trash2, User } from "lucide-react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { useEffect, useRef, useState } from "react";
+import { LoginModal } from "@/components/auth/LoginModal";
 import { useAuth } from "@/contexts/AuthContext";
 import { useTheme } from "@/contexts/ThemeContext";
-import { LoginModal } from "@/components/auth/LoginModal";
+import {
+  getRecentAccounts,
+  type RecentAccount,
+  removeRecentAccount,
+} from "@/lib/auth/recent-accounts";
 import { getSessionDisplayName } from "@/lib/auth/types";
-import { getRecentAccounts, removeRecentAccount, type RecentAccount } from "@/lib/auth/recent-accounts";
 
 const navLinks = [
   { href: "/", label: "Home" },
@@ -46,11 +51,7 @@ function AccountMenu({
     return () => document.removeEventListener("mousedown", handler);
   }, []);
 
-  const currentId = session
-    ? session.role === "solver"
-      ? session.userId
-      : session.uid
-    : null;
+  const currentId = session ? (session.role === "solver" ? session.userId : session.uid) : null;
 
   const others = recents.filter((a) => a.id !== currentId);
   const displayName = session ? getSessionDisplayName(session) : "?";
@@ -75,13 +76,15 @@ function AccountMenu({
             <div className="px-4 py-3 border-b border-rp-border">
               <p className="text-xs text-rp-muted">ログイン中</p>
               <p className="text-sm font-medium text-rp-100 truncate mt-0.5">{displayName}</p>
-              <span className={`inline-block mt-1.5 text-[10px] font-mono px-1.5 py-0.5 rounded ${
-                session.role === "admin"
-                  ? "bg-rp-accent/10 text-rp-accent border border-rp-accent/25"
-                  : session.role === "creator"
-                  ? "bg-rp-400/10 text-rp-400 border border-rp-400/25"
-                  : "bg-rp-700 text-rp-success border border-rp-success/25"
-              }`}>
+              <span
+                className={`inline-block mt-1.5 text-[10px] font-mono px-1.5 py-0.5 rounded ${
+                  session.role === "admin"
+                    ? "bg-rp-accent/10 text-rp-accent border border-rp-accent/25"
+                    : session.role === "creator"
+                      ? "bg-rp-400/10 text-rp-400 border border-rp-400/25"
+                      : "bg-rp-700 text-rp-success border border-rp-success/25"
+                }`}
+              >
                 {session.role.toUpperCase()}
               </span>
             </div>
@@ -90,7 +93,9 @@ function AccountMenu({
           {/* other recent accounts */}
           {others.length > 0 && (
             <div className="border-b border-rp-border py-1">
-              <p className="px-4 pt-1 pb-0.5 text-[10px] text-rp-muted uppercase tracking-wider">切り替え</p>
+              <p className="px-4 pt-1 pb-0.5 text-[10px] text-rp-muted uppercase tracking-wider">
+                切り替え
+              </p>
               {others.map((a) => (
                 <div key={a.id} className="flex items-center group">
                   <button
@@ -122,16 +127,19 @@ function AccountMenu({
                     className="px-2 py-2 text-rp-muted hover:text-rp-accent opacity-0 group-hover:opacity-100 transition-opacity"
                     title="削除"
                   >
-                    ×
+                    <Trash2 aria-hidden="true" size={14} />
                   </button>
                 </div>
               ))}
               <button
                 type="button"
-                onClick={() => { setOpen(false); onSwitch({ tab: "solver-login" }); }}
+                onClick={() => {
+                  setOpen(false);
+                  onSwitch({ tab: "solver-login" });
+                }}
                 className="flex w-full items-center gap-2 px-4 py-2 text-sm text-rp-muted hover:text-rp-100 hover:bg-rp-800 transition-colors"
               >
-                <span className="text-rp-muted">+</span>
+                <Plus aria-hidden="true" size={14} className="text-rp-muted" />
                 別のアカウントでログイン
               </button>
             </div>
@@ -141,10 +149,13 @@ function AccountMenu({
             <div className="border-b border-rp-border">
               <button
                 type="button"
-                onClick={() => { setOpen(false); onSwitch({ tab: "solver-login" }); }}
+                onClick={() => {
+                  setOpen(false);
+                  onSwitch({ tab: "solver-login" });
+                }}
                 className="flex w-full items-center gap-2 px-4 py-2.5 text-sm text-rp-muted hover:text-rp-100 hover:bg-rp-800 transition-colors"
               >
-                <span>+</span>
+                <Plus aria-hidden="true" size={14} />
                 別のアカウントでログイン
               </button>
             </div>
@@ -155,20 +166,18 @@ function AccountMenu({
             className="flex items-center gap-2 px-4 py-2.5 text-sm text-rp-500 hover:text-rp-100 hover:bg-rp-800 transition-colors"
             onClick={() => setOpen(false)}
           >
-            <svg width="14" height="14" viewBox="0 0 16 16" fill="none">
-              <circle cx="8" cy="5" r="3" stroke="currentColor" strokeWidth="1.4" />
-              <path d="M2 14c0-3.3 2.7-6 6-6s6 2.7 6 6" stroke="currentColor" strokeWidth="1.4" strokeLinecap="round" />
-            </svg>
+            <User aria-hidden="true" size={14} />
             アカウント設定
           </Link>
           <button
             type="button"
-            onClick={() => { setOpen(false); onLogout(); }}
+            onClick={() => {
+              setOpen(false);
+              onLogout();
+            }}
             className="flex w-full items-center gap-2 px-4 py-2.5 text-sm text-rp-500 hover:text-rp-accent hover:bg-rp-800 transition-colors"
           >
-            <svg width="14" height="14" viewBox="0 0 16 16" fill="none">
-              <path d="M6 2H3a1 1 0 00-1 1v10a1 1 0 001 1h3M10 11l3-3-3-3M13 8H6" stroke="currentColor" strokeWidth="1.4" strokeLinecap="round" strokeLinejoin="round" />
-            </svg>
+            <LogOut aria-hidden="true" size={14} />
             ログアウト
           </button>
         </div>
@@ -182,7 +191,9 @@ export function GlobalNav() {
   const { theme, toggleTheme } = useTheme();
   const pathname = usePathname();
   const [loginOpen, setLoginOpen] = useState(false);
-  const [loginInitialTab, setLoginInitialTab] = useState<"google" | "solver-login" | "solver-signup" | undefined>();
+  const [loginInitialTab, setLoginInitialTab] = useState<
+    "google" | "solver-login" | "solver-signup" | undefined
+  >();
   const [loginInitialUserId, setLoginInitialUserId] = useState<string | undefined>();
 
   const extraLinks = [];
@@ -220,7 +231,9 @@ export function GlobalNav() {
           body: JSON.stringify({ idToken }),
         });
         await refresh();
-      } catch { /* popup cancelled */ }
+      } catch {
+        /* popup cancelled */
+      }
       return;
     }
     setLoginInitialTab(target.tab);
@@ -239,7 +252,8 @@ export function GlobalNav() {
 
             <div className="flex items-center gap-1">
               {allLinks.map((link) => {
-                const active = link.href === "/" ? pathname === "/" : pathname.startsWith(link.href);
+                const active =
+                  link.href === "/" ? pathname === "/" : pathname.startsWith(link.href);
                 return (
                   <Link
                     key={link.href}
@@ -263,18 +277,13 @@ export function GlobalNav() {
               aria-label="テーマ切替"
             >
               {theme === "dark" ? (
-                <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round">
-                  <circle cx="12" cy="12" r="5" />
-                  <path d="M12 2v2M12 20v2M4.22 4.22l1.42 1.42M18.36 18.36l1.42 1.42M2 12h2M20 12h2M4.22 19.78l1.42-1.42M18.36 5.64l1.42-1.42" />
-                </svg>
+                <Sun aria-hidden="true" size={15} />
               ) : (
-                <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round">
-                  <path d="M21 12.79A9 9 0 1111.21 3 7 7 0 0021 12.79z" />
-                </svg>
+                <Moon aria-hidden="true" size={15} />
               )}
             </button>
-            {!loading && (
-              session ? (
+            {!loading &&
+              (session ? (
                 <AccountMenu onLogout={logout} onSwitch={openSwitch} />
               ) : (
                 <button
@@ -288,8 +297,7 @@ export function GlobalNav() {
                 >
                   ログイン
                 </button>
-              )
-            )}
+              ))}
           </div>
         </div>
       </nav>

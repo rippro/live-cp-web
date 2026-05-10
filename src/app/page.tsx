@@ -1,3 +1,4 @@
+import { ArrowRight, Check } from "lucide-react";
 import Link from "next/link";
 import { GlobalNav } from "@/components/nav/GlobalNav";
 
@@ -6,11 +7,9 @@ export default function Home() {
     <>
       <GlobalNav />
       <main className="min-h-screen bg-rp-900 pt-14">
-
         {/* Hero */}
         <section>
           <div className="mx-auto max-w-7xl px-6">
-
             <div className="py-4 flex items-center justify-between border-b border-rp-border">
               <span className="text-[10px] font-mono text-rp-muted tracking-[0.22em] uppercase">
                 Competitive Programming Judge System
@@ -25,7 +24,8 @@ export default function Home() {
                     className="font-black text-rp-100 leading-[0.83] tracking-[-0.05em] mb-10"
                     style={{ fontSize: "clamp(60px, 8.5vw, 100px)" }}
                   >
-                    RipPro<br />
+                    RipPro
+                    <br />
                     <span className="text-rp-300">Judge.</span>
                   </h1>
                   <p className="text-[14px] text-rp-500 leading-[1.85] max-w-[380px] font-normal">
@@ -35,9 +35,7 @@ export default function Home() {
                 <div className="flex flex-wrap gap-3 mt-12">
                   <Link href="/events" className="btn-primary inline-flex items-center gap-2">
                     イベントに参加する
-                    <svg width="12" height="12" viewBox="0 0 12 12" fill="none">
-                      <path d="M2 6h8M6 2l4 4-4 4" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" />
-                    </svg>
+                    <ArrowRight aria-hidden="true" size={14} />
                   </Link>
                   <a
                     href="https://www.npmjs.com/package/@rippro/judge"
@@ -61,23 +59,35 @@ export default function Home() {
                     rippro-judge — zsh
                   </span>
                 </div>
-                <div className="p-6 font-mono text-[12px] leading-loose space-y-px" style={{ background: "#111" }}>
+                <div
+                  className="p-6 font-mono text-[12px] leading-loose space-y-px"
+                  style={{ background: "#111" }}
+                >
                   <p>
                     <span style={{ color: "rgba(255,255,255,0.3)" }}>~ $</span>{" "}
                     <span style={{ color: "#fff" }}>npx @rippro/judge@latest</span>
                   </p>
-                  <p style={{ color: "#5BC898" }}>✓ Authenticated: alice</p>
-                  <p style={{ color: "rgba(255,255,255,0.4)" }}>  Event: Shinkan Contest 2025</p>
-                  <p style={{ color: "rgba(255,255,255,0.4)" }}>  3 problems available</p>
+                  <p className="flex items-center gap-1.5" style={{ color: "#5BC898" }}>
+                    <Check aria-hidden="true" size={13} />
+                    Authenticated: alice
+                  </p>
+                  <p style={{ color: "rgba(255,255,255,0.4)" }}> Event: Shinkan Contest 2025</p>
+                  <p style={{ color: "rgba(255,255,255,0.4)" }}> 3 problems available</p>
                   <p className="pt-3">
                     <span style={{ color: "rgba(255,255,255,0.3)" }}>~ $</span>{" "}
                     <span style={{ color: "#fff" }}>rj submit H7C solution.cpp</span>
                   </p>
-                  <p style={{ color: "rgba(255,255,255,0.4)" }}>  Compiling...</p>
-                  <p style={{ color: "rgba(255,255,255,0.4)" }}>  Running 42 test cases...</p>
-                  <p style={{ color: "#5BC898", fontWeight: 600 }}>✓ AC — A solved! (42/42)</p>
+                  <p style={{ color: "rgba(255,255,255,0.4)" }}> Compiling...</p>
+                  <p style={{ color: "rgba(255,255,255,0.4)" }}> Running 42 test cases...</p>
+                  <p
+                    className="flex items-center gap-1.5"
+                    style={{ color: "#5BC898", fontWeight: 600 }}
+                  >
+                    <Check aria-hidden="true" size={13} />
+                    AC — A solved! (42/42)
+                  </p>
                   <p className="pt-1" style={{ color: "rgba(255,255,255,0.2)", fontSize: "10px" }}>
-                    Score +100pt  ·  Rank #3  ↑2
+                    Score +100pt · Rank #3 ↑2
                   </p>
                 </div>
               </div>
@@ -112,12 +122,8 @@ export default function Home() {
                 <span className="text-[10px] font-mono text-rp-muted tracking-[0.12em]">
                   {f.num}
                 </span>
-                <h3 className="text-[13px] font-semibold text-rp-100 tracking-tight">
-                  {f.title}
-                </h3>
-                <p className="text-[13px] text-rp-500 leading-relaxed">
-                  {f.desc}
-                </p>
+                <h3 className="text-[13px] font-semibold text-rp-100 tracking-tight">{f.title}</h3>
+                <p className="text-[13px] text-rp-500 leading-relaxed">{f.desc}</p>
               </div>
             ))}
           </div>

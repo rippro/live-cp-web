@@ -1,4 +1,5 @@
 import type { Timestamp } from "firebase-admin/firestore";
+import { ArrowRight } from "lucide-react";
 import Link from "next/link";
 import { getAdminFirestore } from "@/lib/firebase/admin";
 
@@ -120,22 +121,11 @@ export default async function ProblemsPage({ params }: PageProps) {
                   <span className="w-10 text-right text-base font-bold text-rp-success font-mono tabular-nums">
                     {solves.get(p.id) ?? 0}
                   </span>
-                  <svg
+                  <ArrowRight
                     aria-hidden="true"
-                    width="14"
-                    height="14"
-                    viewBox="0 0 14 14"
-                    fill="none"
-                    className="text-rp-600 group-hover:text-rp-400 transition-colors"
-                  >
-                    <path
-                      d="M3 7h8M7 3l4 4-4 4"
-                      stroke="currentColor"
-                      strokeWidth="1.4"
-                      strokeLinecap="round"
-                      strokeLinejoin="round"
-                    />
-                  </svg>
+                    size={14}
+                    className="text-rp-600 transition-colors group-hover:text-rp-400"
+                  />
                 </div>
               </Link>
             ))}

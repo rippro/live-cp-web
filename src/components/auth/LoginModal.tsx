@@ -1,6 +1,7 @@
 "use client";
 
 import { GoogleAuthProvider, signInWithPopup } from "firebase/auth";
+import { Check, Loader2, LogIn, UserPlus, X, XCircle } from "lucide-react";
 import { useCallback, useEffect, useRef, useState } from "react";
 import { useAuth } from "@/contexts/AuthContext";
 import { getClientAuth } from "@/lib/auth/firebase-client";
@@ -179,17 +180,11 @@ export function LoginModal({ open, onClose, initialTab, initialUserId }: LoginMo
       >
         <button
           onClick={onClose}
-          className="absolute top-4 right-4 text-rp-muted hover:text-rp-100 transition-colors"
+          className="absolute top-4 right-4 flex h-8 w-8 items-center justify-center rounded-md text-rp-muted transition-colors hover:bg-rp-800 hover:text-rp-100"
           type="button"
+          aria-label="閉じる"
         >
-          <svg aria-hidden="true" width="18" height="18" viewBox="0 0 18 18" fill="none">
-            <path
-              d="M3 3l12 12M15 3L3 15"
-              stroke="currentColor"
-              strokeWidth="1.5"
-              strokeLinecap="round"
-            />
-          </svg>
+          <X aria-hidden="true" size={18} />
         </button>
 
         <h2 className="text-xl font-bold tracking-tight text-rp-100 mb-1">
@@ -306,11 +301,21 @@ export function LoginModal({ open, onClose, initialTab, initialUserId }: LoginMo
                   {tab === "solver-signup" && idStatus !== "idle" && (
                     <span className="absolute right-2.5 top-1/2 -translate-y-1/2 text-sm">
                       {idStatus === "checking" && (
-                        <span className="text-rp-muted animate-pulse">…</span>
+                        <Loader2
+                          aria-hidden="true"
+                          className="animate-spin text-rp-muted"
+                          size={14}
+                        />
                       )}
-                      {idStatus === "available" && <span className="text-rp-success">✓</span>}
-                      {idStatus === "taken" && <span className="text-rp-accent">✗</span>}
-                      {idStatus === "invalid" && <span className="text-rp-accent">✗</span>}
+                      {idStatus === "available" && (
+                        <Check aria-hidden="true" className="text-rp-success" size={14} />
+                      )}
+                      {idStatus === "taken" && (
+                        <XCircle aria-hidden="true" className="text-rp-accent" size={14} />
+                      )}
+                      {idStatus === "invalid" && (
+                        <XCircle aria-hidden="true" className="text-rp-accent" size={14} />
+                      )}
                     </span>
                   )}
                 </div>
@@ -358,7 +363,16 @@ export function LoginModal({ open, onClose, initialTab, initialUserId }: LoginMo
                 </p>
               )}
               {error && <p className="text-sm text-rp-accent">{error}</p>}
-              <button type="submit" disabled={loading} className="btn-primary w-full mt-2">
+              <button
+                type="submit"
+                disabled={loading}
+                className="btn-primary inline-flex w-full items-center justify-center gap-1.5 mt-2"
+              >
+                {tab === "solver-signup" ? (
+                  <UserPlus aria-hidden="true" size={15} />
+                ) : (
+                  <LogIn aria-hidden="true" size={15} />
+                )}
                 {loading
                   ? tab === "solver-signup"
                     ? "登録中..."

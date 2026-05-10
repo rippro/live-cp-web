@@ -1,4 +1,5 @@
 import type { Timestamp } from "firebase-admin/firestore";
+import { ArrowRight } from "lucide-react";
 import Link from "next/link";
 import { getAdminFirestore } from "@/lib/firebase/admin";
 
@@ -92,15 +93,7 @@ export default async function EventHomePage({ params }: PageProps) {
             className="btn-primary inline-flex items-center gap-2"
           >
             問題を見る
-            <svg aria-hidden="true" width="14" height="14" viewBox="0 0 14 14" fill="none">
-              <path
-                d="M3 7h8M7 3l4 4-4 4"
-                stroke="currentColor"
-                strokeWidth="1.5"
-                strokeLinecap="round"
-                strokeLinejoin="round"
-              />
-            </svg>
+            <ArrowRight aria-hidden="true" size={14} />
           </Link>
         </div>
       </div>
@@ -109,7 +102,10 @@ export default async function EventHomePage({ params }: PageProps) {
       <div className="bg-rp-border grid grid-cols-2 sm:grid-cols-4 gap-px rounded-lg overflow-hidden mb-10">
         {stats.map((s) => (
           <div key={s.label} className="bg-rp-900 px-6 py-6">
-            <div className="text-4xl font-extrabold tracking-tight text-rp-100 mb-1 tabular-nums" style={{ letterSpacing: "-0.03em" }}>
+            <div
+              className="text-4xl font-extrabold tracking-tight text-rp-100 mb-1 tabular-nums"
+              style={{ letterSpacing: "-0.03em" }}
+            >
               {s.value}
               {s.total !== undefined && s.total !== s.value && (
                 <span className="text-xl text-rp-muted font-normal"> / {s.total}</span>
@@ -143,22 +139,11 @@ export default async function EventHomePage({ params }: PageProps) {
               </p>
               <p className="text-xs text-rp-muted">{link.desc}</p>
             </div>
-            <svg
+            <ArrowRight
               aria-hidden="true"
-              width="15"
-              height="15"
-              viewBox="0 0 15 15"
-              fill="none"
-              className="text-rp-600 group-hover:text-rp-400 transition-colors flex-shrink-0"
-            >
-              <path
-                d="M3.5 7.5h8M8 4l3.5 3.5L8 11"
-                stroke="currentColor"
-                strokeWidth="1.4"
-                strokeLinecap="round"
-                strokeLinejoin="round"
-              />
-            </svg>
+              size={15}
+              className="flex-shrink-0 text-rp-600 transition-colors group-hover:text-rp-400"
+            />
           </Link>
         ))}
       </div>

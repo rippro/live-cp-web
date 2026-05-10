@@ -1,5 +1,6 @@
 "use client";
 
+import { Eye, Pencil, Plus, Settings, Trash2, UserPlus, X } from "lucide-react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
@@ -103,8 +104,9 @@ function EventForm({ onCreated }: { onCreated: (e: Event) => void }) {
         <button
           type="submit"
           disabled={saving}
-          className="ml-auto btn-primary py-1.5 px-4 text-sm disabled:opacity-50"
+          className="ml-auto btn-primary inline-flex items-center gap-1.5 py-1.5 px-4 text-sm disabled:opacity-50"
         >
+          <Plus aria-hidden="true" size={14} />
           {saving ? "作成中..." : "作成"}
         </button>
       </div>
@@ -178,8 +180,9 @@ function UserForm({ onCreated }: { onCreated: (u: User) => void }) {
         <button
           type="submit"
           disabled={saving}
-          className="ml-auto btn-primary py-1.5 px-4 text-sm disabled:opacity-50"
+          className="ml-auto btn-primary inline-flex items-center gap-1.5 py-1.5 px-4 text-sm disabled:opacity-50"
         >
+          <UserPlus aria-hidden="true" size={14} />
           {saving ? "作成中..." : "作成"}
         </button>
       </div>
@@ -391,9 +394,7 @@ export default function AdminPage() {
                         </span>
                         <span
                           className={`text-[10px] font-mono px-1.5 py-0.5 rounded-full border ${
-                            statusLabel === "LIVE"
-                              ? "badge-live"
-                              : "text-rp-muted border-rp-border"
+                            statusLabel === "LIVE" ? "badge-live" : "text-rp-muted border-rp-border"
                           }`}
                         >
                           {statusLabel}
@@ -416,13 +417,18 @@ export default function AdminPage() {
                       >
                         {e.isActive ? "公開中" : "非公開"}
                       </button>
-                      <Link href={`/events/${e.id}`} className="btn-ghost py-1.5 px-3 text-xs">
+                      <Link
+                        href={`/events/${e.id}`}
+                        className="btn-ghost inline-flex items-center gap-1.5 py-1.5 px-3 text-xs"
+                      >
+                        <Eye aria-hidden="true" size={13} />
                         表示
                       </Link>
                       <Link
                         href={`/events/${e.id}/settings`}
-                        className="btn-ghost py-1.5 px-3 text-xs"
+                        className="btn-ghost inline-flex items-center gap-1.5 py-1.5 px-3 text-xs"
                       >
+                        <Settings aria-hidden="true" size={13} />
                         設定
                       </Link>
                       {deleteEventConfirm === e.id ? (
@@ -430,24 +436,27 @@ export default function AdminPage() {
                           <button
                             type="button"
                             onClick={() => deleteEvent(e.id)}
-                            className="text-xs px-3 py-1.5 rounded bg-rp-accent text-white hover:opacity-90"
+                            className="inline-flex items-center gap-1.5 text-xs px-3 py-1.5 rounded bg-rp-accent text-white hover:opacity-90"
                           >
+                            <Trash2 aria-hidden="true" size={13} />
                             削除確認
                           </button>
                           <button
                             type="button"
                             onClick={() => setDeleteEventConfirm(null)}
-                            className="btn-ghost py-1.5 px-2 text-xs"
+                            className="btn-ghost inline-flex items-center py-1.5 px-2 text-xs"
+                            aria-label="キャンセル"
                           >
-                            ×
+                            <X aria-hidden="true" size={13} />
                           </button>
                         </>
                       ) : (
                         <button
                           type="button"
                           onClick={() => setDeleteEventConfirm(e.id)}
-                          className="btn-ghost py-1.5 px-3 text-xs text-rp-accent border-rp-accent/30 hover:bg-rp-accent/10"
+                          className="btn-ghost inline-flex items-center gap-1.5 py-1.5 px-3 text-xs text-rp-accent border-rp-accent/30 hover:bg-rp-accent/10"
                         >
+                          <Trash2 aria-hidden="true" size={13} />
                           削除
                         </button>
                       )}
@@ -486,24 +495,27 @@ export default function AdminPage() {
                         <button
                           type="button"
                           onClick={() => deleteUser(u.id)}
-                          className="text-xs px-3 py-1.5 rounded bg-rp-accent text-white hover:opacity-90"
+                          className="inline-flex items-center gap-1.5 text-xs px-3 py-1.5 rounded bg-rp-accent text-white hover:opacity-90"
                         >
+                          <Trash2 aria-hidden="true" size={13} />
                           削除確認
                         </button>
                         <button
                           type="button"
                           onClick={() => setDeleteUserConfirm(null)}
-                          className="btn-ghost py-1.5 px-2 text-xs"
+                          className="btn-ghost inline-flex items-center py-1.5 px-2 text-xs"
+                          aria-label="キャンセル"
                         >
-                          ×
+                          <X aria-hidden="true" size={13} />
                         </button>
                       </>
                     ) : (
                       <button
                         type="button"
                         onClick={() => setDeleteUserConfirm(u.id)}
-                        className="btn-ghost py-1.5 px-3 text-xs text-rp-accent border-rp-accent/30 hover:bg-rp-accent/10"
+                        className="btn-ghost inline-flex items-center gap-1.5 py-1.5 px-3 text-xs text-rp-accent border-rp-accent/30 hover:bg-rp-accent/10"
                       >
+                        <Trash2 aria-hidden="true" size={13} />
                         削除
                       </button>
                     )}
@@ -557,11 +569,16 @@ export default function AdminPage() {
                     <div className="flex gap-2">
                       <Link
                         href={`/events/${p.eventId}/problems/${p.id}`}
-                        className="btn-ghost py-1.5 px-3 text-xs"
+                        className="btn-ghost inline-flex items-center gap-1.5 py-1.5 px-3 text-xs"
                       >
+                        <Eye aria-hidden="true" size={13} />
                         表示
                       </Link>
-                      <Link href={`/creator`} className="btn-ghost py-1.5 px-3 text-xs">
+                      <Link
+                        href={`/creator`}
+                        className="btn-ghost inline-flex items-center gap-1.5 py-1.5 px-3 text-xs"
+                      >
+                        <Pencil aria-hidden="true" size={13} />
                         編集
                       </Link>
                     </div>

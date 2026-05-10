@@ -1,9 +1,10 @@
 "use client";
 
-import { useAuth } from "@/contexts/AuthContext";
+import { LogOut } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { useEffect } from "react";
 import { GlobalNav } from "@/components/nav/GlobalNav";
+import { useAuth } from "@/contexts/AuthContext";
 
 export default function AccountPage() {
   const { session, loading, logout } = useAuth();
@@ -34,18 +35,20 @@ export default function AccountPage() {
           <div className="card-surface p-6 space-y-4">
             <div>
               <p className="text-xs text-rp-muted mb-1">ロール</p>
-              <span className={`inline-block text-xs font-mono px-2 py-1 rounded border ${
-                session.role === "admin"
-                  ? "bg-rp-accent/20 text-rp-accent border-rp-accent/30"
-                  : session.role === "creator"
-                  ? "bg-rp-400/20 text-rp-300 border-rp-400/30"
-                  : "bg-rp-success/20 text-rp-success border-rp-success/30"
-              }`}>
+              <span
+                className={`inline-block text-xs font-mono px-2 py-1 rounded border ${
+                  session.role === "admin"
+                    ? "bg-rp-accent/20 text-rp-accent border-rp-accent/30"
+                    : session.role === "creator"
+                      ? "bg-rp-400/20 text-rp-300 border-rp-400/30"
+                      : "bg-rp-success/20 text-rp-success border-rp-success/30"
+                }`}
+              >
                 {session.role.toUpperCase()}
               </span>
             </div>
 
-            {(session.role === "admin" || session.role === "creator") ? (
+            {session.role === "admin" || session.role === "creator" ? (
               <>
                 <div>
                   <p className="text-xs text-rp-muted mb-1">メールアドレス</p>
@@ -59,7 +62,9 @@ export default function AccountPage() {
             ) : (
               <div>
                 <p className="text-xs text-rp-muted mb-1">ユーザーID</p>
-                <p className="text-sm text-rp-100 font-mono">{session.role === "solver" ? session.userId : ""}</p>
+                <p className="text-sm text-rp-100 font-mono">
+                  {session.role === "solver" ? session.userId : ""}
+                </p>
               </div>
             )}
 
@@ -70,8 +75,9 @@ export default function AccountPage() {
                   await logout();
                   router.push("/");
                 }}
-                className="btn-ghost text-rp-accent border-rp-accent/30 hover:bg-rp-accent/10 hover:border-rp-accent"
+                className="btn-ghost inline-flex items-center gap-1.5 text-rp-accent border-rp-accent/30 hover:bg-rp-accent/10 hover:border-rp-accent"
               >
+                <LogOut aria-hidden="true" size={15} />
                 ログアウト
               </button>
             </div>

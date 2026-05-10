@@ -331,4 +331,34 @@
     border: 0;
     padding: 0;
   }
+  .markdown-code-block {
+    position: relative;
+    max-width: 100%;
+  }
+  .markdown-code-copy {
+    position: absolute;
+    top: 0.5rem;
+    right: 0.5rem;
+    z-index: 1;
+    display: flex;
+    height: 1.75rem;
+    width: 1.75rem;
+    align-items: center;
+    justify-content: center;
+    border: 1px solid var(--rp-border);
+    border-radius: 6px;
+    background: color-mix(in srgb, var(--rp-900) 94%, transparent);
+    color: var(--rp-300);
+    cursor: pointer;
+    padding: 0;
+    transition:
+      background 0.15s,
+      border-color 0.15s,
+      color 0.15s;
+  }
+  .markdown-code-copy:hover {
+    background: var(--rp-900);
+    border-color: var(--rp-500);
+    color: var(--rp-100);
+  }
 }

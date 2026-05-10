@@ -1,5 +1,6 @@
 "use client";
 
+import { Eye, FilePlus2, Pencil, Plus, Save, Trash2, Upload, X } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { useEffect, useRef, useState } from "react";
 import { createPortal } from "react-dom";
@@ -159,8 +160,13 @@ function ProblemForm({
             <p className="block text-xs text-rp-muted">隠しテストケース</p>
             <p className="text-[10px] text-rp-500 mt-0.5">CLIジャッジ用。参加者には見えない。</p>
           </div>
-          <button type="button" onClick={addTestcase} className="btn-ghost py-1.5 px-3 text-xs">
-            + 追加
+          <button
+            type="button"
+            onClick={addTestcase}
+            className="btn-ghost inline-flex items-center gap-1.5 py-1.5 px-3 text-xs"
+          >
+            <Plus aria-hidden="true" size={14} />
+            追加
           </button>
         </div>
         <div className="space-y-4">
@@ -171,9 +177,10 @@ function ProblemForm({
                 <button
                   type="button"
                   onClick={() => removeTestcase(index)}
-                  className="btn-ghost py-1 px-2 text-xs"
+                  className="btn-ghost inline-flex items-center gap-1.5 py-1 px-2 text-xs"
                   disabled={testcases.length === 1}
                 >
+                  <Trash2 aria-hidden="true" size={13} />
                   削除
                 </button>
               </div>
@@ -248,7 +255,12 @@ function ProblemForm({
       </div>
       {error && <p className="text-sm text-rp-accent">{error}</p>}
       <div className="flex gap-3 pt-2">
-        <button type="submit" disabled={saving} className="btn-primary">
+        <button
+          type="submit"
+          disabled={saving}
+          className="btn-primary inline-flex items-center gap-1.5"
+        >
+          <Save aria-hidden="true" size={15} />
           {saving ? "保存中..." : "保存"}
         </button>
         <button type="button" onClick={onCancel} className="btn-ghost">
@@ -309,9 +321,10 @@ function ProblemPreview({ problem, onClose }: { problem: Problem; onClose: () =>
           <button
             type="button"
             onClick={onClose}
-            className="btn-ghost shrink-0 py-1.5 px-3 text-xs"
+            className="btn-ghost inline-flex shrink-0 items-center gap-1.5 py-1.5 px-3 text-xs"
           >
-            ✕ 閉じる
+            <X aria-hidden="true" size={14} />
+            閉じる
           </button>
         </div>
 
@@ -476,8 +489,9 @@ function BulkImportPanel({ eventId, onDone }: { eventId: string; onDone: () => v
           type="button"
           onClick={doImport}
           disabled={importing || !json.trim()}
-          className="btn-primary"
+          className="btn-primary inline-flex items-center gap-1.5"
         >
+          <Upload aria-hidden="true" size={15} />
           {importing ? "インポート中..." : "一括インポート"}
         </button>
       </div>
@@ -638,8 +652,9 @@ export default function CreatorPage() {
               <button
                 type="button"
                 onClick={() => setActivePanel("none")}
-                className="btn-ghost mt-4"
+                className="btn-ghost mt-4 inline-flex items-center gap-1.5"
               >
+                <X aria-hidden="true" size={15} />
                 閉じる
               </button>
             </div>
@@ -670,11 +685,21 @@ export default function CreatorPage() {
             </h2>
             {!showingPanel && (
               <div className="flex flex-wrap gap-2">
-                <button type="button" onClick={() => setActivePanel("bulk")} className="btn-ghost">
+                <button
+                  type="button"
+                  onClick={() => setActivePanel("bulk")}
+                  className="btn-ghost inline-flex items-center gap-1.5"
+                >
+                  <Upload aria-hidden="true" size={15} />
                   一括インポート
                 </button>
-                <button type="button" onClick={() => setActivePanel("new")} className="btn-primary">
-                  + 新規問題
+                <button
+                  type="button"
+                  onClick={() => setActivePanel("new")}
+                  className="btn-primary inline-flex items-center gap-1.5"
+                >
+                  <FilePlus2 aria-hidden="true" size={15} />
+                  新規問題
                 </button>
               </div>
             )}
@@ -684,10 +709,20 @@ export default function CreatorPage() {
             <div className="card-surface p-12 text-center">
               <p className="text-rp-muted mb-4">問題がありません</p>
               <div className="flex gap-2 justify-center">
-                <button type="button" onClick={() => setActivePanel("bulk")} className="btn-ghost">
+                <button
+                  type="button"
+                  onClick={() => setActivePanel("bulk")}
+                  className="btn-ghost inline-flex items-center gap-1.5"
+                >
+                  <Upload aria-hidden="true" size={15} />
                   一括インポート
                 </button>
-                <button type="button" onClick={() => setActivePanel("new")} className="btn-primary">
+                <button
+                  type="button"
+                  onClick={() => setActivePanel("new")}
+                  className="btn-primary inline-flex items-center gap-1.5"
+                >
+                  <FilePlus2 aria-hidden="true" size={15} />
                   最初の問題を作成
                 </button>
               </div>
@@ -726,15 +761,17 @@ export default function CreatorPage() {
                     <button
                       type="button"
                       onClick={() => void openPreview(p.id)}
-                      className="btn-ghost py-1.5 px-3 text-xs"
+                      className="btn-ghost inline-flex items-center gap-1.5 py-1.5 px-3 text-xs"
                     >
+                      <Eye aria-hidden="true" size={13} />
                       表示
                     </button>
                     <button
                       type="button"
                       onClick={() => void openEdit(p.id)}
-                      className="btn-ghost py-1.5 px-3 text-xs"
+                      className="btn-ghost inline-flex items-center gap-1.5 py-1.5 px-3 text-xs"
                     >
+                      <Pencil aria-hidden="true" size={13} />
                       編集
                     </button>
                     {deleteConfirm === p.id ? (
@@ -742,24 +779,27 @@ export default function CreatorPage() {
                         <button
                           type="button"
                           onClick={() => void deleteProblem(p.id)}
-                          className="text-xs px-3 py-1.5 rounded bg-rp-accent text-white hover:opacity-90 transition-opacity"
+                          className="inline-flex items-center gap-1.5 text-xs px-3 py-1.5 rounded bg-rp-accent text-white hover:opacity-90 transition-opacity"
                         >
+                          <Trash2 aria-hidden="true" size={13} />
                           削除確認
                         </button>
                         <button
                           type="button"
                           onClick={() => setDeleteConfirm(null)}
-                          className="btn-ghost py-1.5 px-2 text-xs"
+                          className="btn-ghost inline-flex items-center py-1.5 px-2 text-xs"
+                          aria-label="キャンセル"
                         >
-                          ×
+                          <X aria-hidden="true" size={13} />
                         </button>
                       </div>
                     ) : (
                       <button
                         type="button"
                         onClick={() => setDeleteConfirm(p.id)}
-                        className="btn-ghost py-1.5 px-3 text-xs text-rp-accent border-rp-accent/30 hover:bg-rp-accent/10"
+                        className="btn-ghost inline-flex items-center gap-1.5 py-1.5 px-3 text-xs text-rp-accent border-rp-accent/30 hover:bg-rp-accent/10"
                       >
+                        <Trash2 aria-hidden="true" size={13} />
                         削除
                       </button>
                     )}
