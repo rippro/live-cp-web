@@ -273,6 +273,8 @@
     color: var(--rp-100);
     font-size: 14px;
     line-height: 1.9;
+    max-width: 100%;
+    overflow-wrap: anywhere;
   }
   .markdown-body > * + * {
     margin-top: 1rem;
@@ -298,6 +300,17 @@
     list-style: disc;
     padding-left: 1.4rem;
   }
+  .markdown-body p,
+  .markdown-body li {
+    min-width: 0;
+  }
+  .markdown-body table,
+  .markdown-body .katex-display {
+    display: block;
+    max-width: 100%;
+    overflow-x: auto;
+    overflow-y: hidden;
+  }
   .markdown-body code {
     background: var(--rp-800);
     border: 1px solid var(--rp-border);
@@ -309,6 +322,7 @@
     background: var(--rp-800);
     border: 1px solid var(--rp-border);
     border-radius: 8px;
+    max-width: 100%;
     overflow-x: auto;
     padding: 1rem;
   }

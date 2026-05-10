@@ -1,9 +1,10 @@
 "use client";
 
-import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
+import { createPortal } from "react-dom";
 import { GlobalNav } from "@/components/nav/GlobalNav";
+import { MarkdownView } from "@/components/problems/MarkdownView";
 import { useAuth } from "@/contexts/AuthContext";
 
 interface Problem {
@@ -93,13 +94,14 @@ function ProblemForm({
   }
 
   function updateTestcase(index: number, updates: Partial<Testcase>) {
-    setTestcases((cases) =>
-      cases.map((tc, i) => (i === index ? { ...tc, ...updates } : tc)),
-    );
+    setTestcases((cases) => cases.map((tc, i) => (i === index ? { ...tc, ...updates } : tc)));
   }
 
   function addTestcase() {
-    setTestcases((cases) => [...cases, { clientId: makeClientId(), input: "", expectedOutput: "" }]);
+    setTestcases((cases) => [
+      ...cases,
+      { clientId: makeClientId(), input: "", expectedOutput: "" },
+    ]);
   }
 
   function removeTestcase(index: number) {
@@ -131,7 +133,9 @@ function ProblemForm({
           className="input-field min-h-[220px] resize-y font-mono"
           value={form.statement}
           onChange={(e) => setForm((f) => ({ ...f, statement: e.target.value }))}
-          placeholder={"# 問題文\n\n$1 \\le N \\le 10^5$\n\n## サンプル入力 1\n```\n1 2\n```\n\n## サンプル出力 1\n```\n3\n```"}
+          placeholder={
+            "# 問題文\n\n$1 \\le N \\le 10^5$\n\n## サンプル入力 1\n```\n1 2\n```\n\n## サンプル出力 1\n```\n3\n```"
+          }
           required
         />
       </div>
@@ -144,7 +148,9 @@ function ProblemForm({
           className="input-field min-h-[180px] resize-y font-mono"
           value={form.solutionCode}
           onChange={(e) => setForm((f) => ({ ...f, solutionCode: e.target.value }))}
-          placeholder={"#include <bits/stdc++.h>\nusing namespace std;\nint main() {\n  return 0;\n}"}
+          placeholder={
+            "#include <bits/stdc++.h>\nusing namespace std;\nint main() {\n  return 0;\n}"
+          }
         />
       </div>
       <div>
@@ -153,20 +159,13 @@ function ProblemForm({
             <p className="block text-xs text-rp-muted">隠しテストケース</p>
             <p className="text-[10px] text-rp-500 mt-0.5">CLIジャッジ用。参加者には見えない。</p>
           </div>
-          <button
-            type="button"
-            onClick={addTestcase}
-            className="btn-ghost py-1.5 px-3 text-xs"
-          >
+          <button type="button" onClick={addTestcase} className="btn-ghost py-1.5 px-3 text-xs">
             + 追加
           </button>
         </div>
         <div className="space-y-4">
           {testcases.map((tc, index) => (
-            <div
-              key={tc.clientId}
-              className="rounded-lg border border-rp-border bg-rp-800 p-4"
-            >
+            <div key={tc.clientId} className="rounded-lg border border-rp-border bg-rp-800 p-4">
               <div className="mb-3 flex items-center justify-between">
                 <span className="text-[10px] font-mono text-rp-muted">HIDDEN #{index + 1}</span>
                 <button
@@ -260,16 +259,146 @@ function ProblemForm({
   );
 }
 
-function BulkImportPanel({
-  eventId,
-  onDone,
-}: {
-  eventId: string;
-  onDone: () => void;
-}) {
+function ProblemPreview({ problem, onClose }: { problem: Problem; onClose: () => void }) {
+  const overlayRef = useRef<HTMLDivElement>(null);
+  const [mounted, setMounted] = useState(false);
+
+  useEffect(() => {
+    const handler = (e: KeyboardEvent) => {
+      if (e.key === "Escape") onClose();
+    };
+    document.addEventListener("keydown", handler);
+    document.body.style.overflow = "hidden";
+    setMounted(true);
+    return () => {
+      document.removeEventListener("keydown", handler);
+      document.body.style.overflow = "";
+    };
+  }, [onClose]);
+
+  if (!mounted) return null;
+
+  return createPortal(
+    <div
+      ref={overlayRef}
+      className="fixed inset-0 z-[1000] flex items-start justify-center bg-black/70 p-4 sm:p-6"
+      role="dialog"
+      aria-modal="true"
+      aria-labelledby="problem-preview-title"
+    >
+      <button
+        type="button"
+        aria-label="プレビューを閉じる"
+        className="absolute inset-0 h-full w-full cursor-default"
+        onClick={onClose}
+      />
+      <div className="relative z-10 flex max-h-[calc(100vh-2rem)] w-full max-w-4xl flex-col overflow-hidden rounded-lg border border-rp-border bg-rp-900 shadow-2xl sm:max-h-[calc(100vh-3rem)]">
+        {/* Header bar */}
+        <div className="flex min-h-16 flex-shrink-0 items-center justify-between gap-4 border-b border-rp-border bg-rp-900 px-4 py-3 sm:px-6">
+          <div className="flex min-w-0 items-center gap-2 sm:gap-3">
+            <span className="font-mono text-sm font-bold text-rp-highlight bg-rp-highlight-tint border border-rp-highlight/25 px-2.5 py-1 rounded-md">
+              {problem.id}
+            </span>
+            {!problem.isPublished && (
+              <span className="text-[10px] font-mono px-2 py-0.5 rounded border border-rp-border text-rp-muted bg-rp-800">
+                DRAFT
+              </span>
+            )}
+            <span className="text-[10px] font-mono text-rp-muted">PREVIEW</span>
+          </div>
+          <button
+            type="button"
+            onClick={onClose}
+            className="btn-ghost shrink-0 py-1.5 px-3 text-xs"
+          >
+            ✕ 閉じる
+          </button>
+        </div>
+
+        <div className="min-h-0 flex-1 overflow-y-auto px-4 py-6 sm:px-6 sm:py-8">
+          {/* Problem title */}
+          <div className="mb-8 border-b border-rp-border pb-6">
+            <h1
+              id="problem-preview-title"
+              className="mb-3 text-2xl font-extrabold tracking-tight text-rp-100 sm:text-3xl"
+            >
+              {problem.title}
+            </h1>
+            <div className="flex flex-wrap gap-x-4 gap-y-2 text-xs text-rp-muted font-mono">
+              <span>
+                制限時間: <span className="text-rp-300">{problem.timeLimitMs}ms</span>
+              </span>
+              <span>
+                ポイント: <span className="text-rp-300">{problem.points}pt</span>
+              </span>
+            </div>
+          </div>
+
+          {/* Statement */}
+          <section className="mb-10">
+            <MarkdownView source={problem.statement} />
+          </section>
+
+          {/* Solution code */}
+          {problem.solutionCode && (
+            <section className="mb-10">
+              <h2 className="text-xs font-medium tracking-widest text-rp-muted uppercase mb-4 pb-2 border-b border-rp-border">
+                模範解答
+              </h2>
+              <MarkdownView source={`\`\`\`cpp\n${problem.solutionCode}\n\`\`\``} />
+            </section>
+          )}
+
+          {/* Hidden testcases */}
+          {problem.testcases.length > 0 && (
+            <section>
+              <h2 className="text-xs font-medium tracking-widest text-rp-muted uppercase mb-4 pb-2 border-b border-rp-border">
+                隠しテストケース ({problem.testcases.length})
+              </h2>
+              <div className="space-y-4">
+                {problem.testcases.map((tc, i) => (
+                  <div
+                    key={tc.id ?? tc.clientId}
+                    className="rounded-lg border border-rp-border bg-rp-800 p-4"
+                  >
+                    <p className="text-[10px] font-mono text-rp-muted mb-3">HIDDEN #{i + 1}</p>
+                    <div className="grid gap-3 md:grid-cols-2">
+                      <div className="min-w-0">
+                        <p className="text-[10px] font-medium tracking-widest text-rp-muted uppercase mb-2">
+                          Input
+                        </p>
+                        <pre className="min-h-[48px] overflow-x-auto whitespace-pre rounded border border-rp-border bg-rp-900 p-3 text-xs font-mono text-rp-300">
+                          {tc.input}
+                        </pre>
+                      </div>
+                      <div className="min-w-0">
+                        <p className="text-[10px] font-medium tracking-widest text-rp-muted uppercase mb-2">
+                          Expected Output
+                        </p>
+                        <pre className="min-h-[48px] overflow-x-auto whitespace-pre rounded border border-rp-border bg-rp-900 p-3 text-xs font-mono text-rp-success">
+                          {tc.expectedOutput}
+                        </pre>
+                      </div>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </section>
+          )}
+        </div>
+      </div>
+    </div>,
+    document.body,
+  );
+}
+
+function BulkImportPanel({ eventId, onDone }: { eventId: string; onDone: () => void }) {
   const [json, setJson] = useState("");
   const [importing, setImporting] = useState(false);
-  const [result, setResult] = useState<{ created: string[]; errors: { index: number; error: string }[] } | null>(null);
+  const [result, setResult] = useState<{
+    created: string[];
+    errors: { index: number; error: string }[];
+  } | null>(null);
   const [parseError, setParseError] = useState("");
 
   async function doImport() {
@@ -293,7 +422,10 @@ function BulkImportPanel({
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify(parsed),
       });
-      const data = (await res.json()) as { created: string[]; errors: { index: number; error: string }[] };
+      const data = (await res.json()) as {
+        created: string[];
+        errors: { index: number; error: string }[];
+      };
       setResult(data);
       if (data.created.length > 0) onDone();
     } catch {
@@ -306,9 +438,7 @@ function BulkImportPanel({
   return (
     <div className="space-y-3">
       <div>
-        <p className="text-xs text-rp-muted mb-1.5">
-          AI生成JSONを貼り付け
-        </p>
+        <p className="text-xs text-rp-muted mb-1.5">AI生成JSONを貼り付け</p>
         <pre className="text-[10px] text-rp-500 bg-rp-900 border border-rp-border rounded p-3 mb-2 overflow-x-auto">{`[
   {
     "title": "A + B 問題",
@@ -365,6 +495,7 @@ export default function CreatorPage() {
   const [problems, setProblems] = useState<Problem[]>([]);
   const [activePanel, setActivePanel] = useState<ActivePanel>("none");
   const [editProblem, setEditProblem] = useState<Problem | null>(null);
+  const [previewProblem, setPreviewProblem] = useState<Problem | null>(null);
   const [deleteConfirm, setDeleteConfirm] = useState<string | null>(null);
 
   useEffect(() => {
@@ -425,6 +556,21 @@ export default function CreatorPage() {
     setActivePanel("none");
   }
 
+  async function openPreview(problemId: string) {
+    const res = await fetch(`/api/events/${selectedEvent}/problems/${problemId}`);
+    if (!res.ok) return;
+    const problem = (await res.json()) as Problem;
+    // clientId が必要なので付与
+    const normalized: Problem = {
+      ...problem,
+      testcases: (problem.testcases ?? []).map((tc: Testcase) => ({
+        ...tc,
+        clientId: tc.id ?? makeClientId(),
+      })),
+    };
+    setPreviewProblem(normalized);
+  }
+
   const myProblems =
     session?.role === "admin"
       ? problems
@@ -470,7 +616,10 @@ export default function CreatorPage() {
               <ProblemForm
                 key="new"
                 eventId={selectedEvent}
-                onSave={() => { setActivePanel("none"); reloadProblems(); }}
+                onSave={() => {
+                  setActivePanel("none");
+                  reloadProblems();
+                }}
                 onCancel={() => setActivePanel("none")}
               />
             </div>
@@ -482,7 +631,9 @@ export default function CreatorPage() {
               <h2 className="font-display text-lg font-bold text-rp-100 mb-4">一括インポート</h2>
               <BulkImportPanel
                 eventId={selectedEvent}
-                onDone={() => { reloadProblems(); }}
+                onDone={() => {
+                  reloadProblems();
+                }}
               />
               <button
                 type="button"
@@ -504,30 +655,25 @@ export default function CreatorPage() {
                 key={editProblem.id}
                 eventId={selectedEvent}
                 initial={editProblem}
-                onSave={() => { setEditProblem(null); reloadProblems(); }}
+                onSave={() => {
+                  setEditProblem(null);
+                  reloadProblems();
+                }}
                 onCancel={() => setEditProblem(null)}
               />
             </div>
           )}
 
-          <div className="flex items-center justify-between mb-4">
+          <div className="mb-4 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
             <h2 className="font-display text-lg font-bold text-rp-100">
               {session?.role === "admin" ? "全問題" : "自分の問題"} ({myProblems.length})
             </h2>
             {!showingPanel && (
-              <div className="flex gap-2">
-                <button
-                  type="button"
-                  onClick={() => setActivePanel("bulk")}
-                  className="btn-ghost"
-                >
+              <div className="flex flex-wrap gap-2">
+                <button type="button" onClick={() => setActivePanel("bulk")} className="btn-ghost">
                   一括インポート
                 </button>
-                <button
-                  type="button"
-                  onClick={() => setActivePanel("new")}
-                  className="btn-primary"
-                >
+                <button type="button" onClick={() => setActivePanel("new")} className="btn-primary">
                   + 新規問題
                 </button>
               </div>
@@ -549,22 +695,25 @@ export default function CreatorPage() {
           ) : (
             <div className="space-y-2">
               {myProblems.map((p) => (
-                <div key={p.id} className="card-surface flex items-center gap-4 px-5 py-4">
+                <div
+                  key={p.id}
+                  className="card-surface flex flex-col gap-3 px-4 py-4 sm:flex-row sm:items-center sm:gap-4 sm:px-5"
+                >
                   <div className="flex-shrink-0 w-10 h-10 rounded-lg bg-rp-700 flex items-center justify-center">
                     <span className="font-mono text-xs font-bold text-rp-300">{p.id}</span>
                   </div>
                   <div className="flex-1 min-w-0">
-                    <div className="flex items-center gap-2">
-                      <span className="font-display text-sm font-semibold text-rp-100 truncate">
+                    <div className="flex min-w-0 items-center gap-2">
+                      <span className="min-w-0 flex-1 truncate font-display text-sm font-semibold text-rp-100">
                         {p.title}
                       </span>
                       {!p.isPublished && (
-                        <span className="text-[10px] font-mono px-1.5 py-0.5 rounded border border-rp-muted/30 text-rp-muted">
+                        <span className="shrink-0 text-[10px] font-mono px-1.5 py-0.5 rounded border border-rp-muted/30 text-rp-muted">
                           DRAFT
                         </span>
                       )}
                       {p.isPublished && (
-                        <span className="text-[10px] font-mono px-1.5 py-0.5 rounded badge-live">
+                        <span className="shrink-0 text-[10px] font-mono px-1.5 py-0.5 rounded badge-live">
                           LIVE
                         </span>
                       )}
@@ -573,13 +722,14 @@ export default function CreatorPage() {
                       更新: {new Date(p.updatedAt).toLocaleDateString("ja-JP")}
                     </p>
                   </div>
-                  <div className="flex items-center gap-2">
-                    <Link
-                      href={`/events/${selectedEvent}/problems/${p.id}`}
+                  <div className="flex shrink-0 flex-wrap items-center gap-2 sm:justify-end">
+                    <button
+                      type="button"
+                      onClick={() => void openPreview(p.id)}
                       className="btn-ghost py-1.5 px-3 text-xs"
                     >
                       表示
-                    </Link>
+                    </button>
                     <button
                       type="button"
                       onClick={() => void openEdit(p.id)}
@@ -620,6 +770,9 @@ export default function CreatorPage() {
           )}
         </div>
       </main>
+      {previewProblem && (
+        <ProblemPreview problem={previewProblem} onClose={() => setPreviewProblem(null)} />
+      )}
     </>
   );
 }
