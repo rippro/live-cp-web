@@ -40,6 +40,15 @@ export async function POST(request: Request) {
   );
 }
 
+async function batchDelete(db: ReturnType<typeof getAdminFirestore>, refs: FirebaseFirestore.DocumentReference[]) {
+  // Firestore batch limit = 500
+  for (let i = 0; i < refs.length; i += 500) {
+    const batch = db.batch();
+    for (const ref of refs.slice(i, i + 500)) batch.delete(ref);
+    await batch.commit();
+  }
+}
+
 export async function DELETE(request: Request) {
   const session = await getSession();
   if (!session || session.role !== "admin") {
@@ -51,7 +60,57 @@ export async function DELETE(request: Request) {
   if (!eventId) return NextResponse.json({ error: "eventId required" }, { status: 400 });
 
   const db = getAdminFirestore();
-  await db.collection("events").doc(eventId).delete();
+
+  // 並列でeventId直引きできるコレクションを取得
+  const [teamsSnap, problemsSnap, testcasesSnap, submissionsSnap, solvesSnap] = await Promise.all([
+    db.collection("teams").where("eventId", "==", eventId).get(),
+    db.collection("problems").where("eventId", "==", eventId).get(),
+    db.collection("testcases").where("eventId", "==", eventId).get(),
+    db.collection("submissions").where("eventId", "==", eventId).get(),
+    db.collection("solves").where("eventId", "==", eventId).get(),
+  ]);
+
+  const teamIds = teamsSnap.docs.map((d) => d.id);
+  const submissionIds = submissionsSnap.docs.map((d) => d.id);
+
+  // teamId経由で取得が必要なもの
+  const [teamMembersSnaps, cliTokensSnaps] = await Promise.all([
+    Promise.all(
+      teamIds.map((tid) => db.collection("teamMembers").where("teamId", "==", tid).get()),
+    ),
+    Promise.all(
+      teamIds.map((tid) => db.collection("cliTokens").where("teamId", "==", tid).get()),
+    ),
+  ]);
+
+  // submissionId経由で取得が必要なもの
+  const submissionCasesSnaps = await Promise.all(
+    submissionIds.map((sid) =>
+      db.collection("submissionCases").where("submissionId", "==", sid).get(),
+    ),
+  );
+
+  // 削除対象のrefをまとめる
+  const refs: FirebaseFirestore.DocumentReference[] = [
+    db.collection("events").doc(eventId),
+    ...teamsSnap.docs.map((d) => d.ref),
+    ...problemsSnap.docs.map((d) => d.ref),
+    ...testcasesSnap.docs.map((d) => d.ref),
+    ...submissionsSnap.docs.map((d) => d.ref),
+    ...solvesSnap.docs.map((d) => d.ref),
+    ...teamMembersSnaps.flatMap((s) => s.docs.map((d) => d.ref)),
+    ...submissionCasesSnaps.flatMap((s) => s.docs.map((d) => d.ref)),
+  ];
+
+  // cliTokens + _unique (tokenHash)
+  const cliTokenDocs = cliTokensSnaps.flatMap((s) => s.docs);
+  for (const doc of cliTokenDocs) {
+    refs.push(doc.ref);
+    const hash = doc.data().tokenHash as string | undefined;
+    if (hash) refs.push(db.collection("_unique").doc(`cliTokens:tokenHash:${hash}`));
+  }
+
+  await batchDelete(db, refs);
   return NextResponse.json({ ok: true });
 }
 

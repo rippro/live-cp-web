@@ -6,7 +6,6 @@ import { useAuth } from "@/contexts/AuthContext";
 
 interface EventData {
   id: string;
-  isActive: boolean;
   startsAt: string;
 }
 
@@ -36,7 +35,6 @@ export default function SettingsPage() {
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           eventId,
-          isActive: event.isActive,
           startsAt: event.startsAt,
         }),
       });
@@ -75,26 +73,6 @@ export default function SettingsPage() {
               value={event.id}
               readOnly
             />
-          </div>
-          <div className="flex items-center justify-between">
-            <div>
-              <p className="text-sm text-rp-100 font-medium">Active</p>
-              <p className="text-xs text-rp-muted">参加者に公開中</p>
-            </div>
-            <button
-              type="button"
-              onClick={() => canEdit && setEvent((e) => (e ? { ...e, isActive: !e.isActive } : e))}
-              disabled={!canEdit}
-              className={`relative h-6 w-11 rounded-full transition-colors ${
-                event.isActive ? "bg-rp-success" : "bg-rp-600"
-              } ${!canEdit ? "opacity-50 cursor-not-allowed" : "cursor-pointer"}`}
-            >
-              <span
-                className={`absolute top-0.5 h-5 w-5 rounded-full bg-white shadow transition-transform ${
-                  event.isActive ? "translate-x-5" : "translate-x-0.5"
-                }`}
-              />
-            </button>
           </div>
           <div>
             <label htmlFor="settings-starts-at" className="block text-xs text-rp-muted mb-1.5">
