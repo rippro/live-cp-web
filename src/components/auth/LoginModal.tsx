@@ -1,9 +1,9 @@
 "use client";
 
-import { useEffect, useRef, useState, useCallback } from "react";
 import { GoogleAuthProvider, signInWithPopup } from "firebase/auth";
-import { getClientAuth } from "@/lib/auth/firebase-client";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { useAuth } from "@/contexts/AuthContext";
+import { getClientAuth } from "@/lib/auth/firebase-client";
 
 interface LoginModalProps {
   open: boolean;
@@ -23,7 +23,7 @@ export function LoginModal({ open, onClose }: LoginModalProps) {
   const [loading, setLoading] = useState(false);
   const [idStatus, setIdStatus] = useState<IdStatus>("idle");
   const checkTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
-  const overlayRef = useRef<HTMLDivElement>(null);
+  const dialogRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
     if (!open) return;
@@ -36,8 +36,14 @@ export function LoginModal({ open, onClose }: LoginModalProps) {
 
   const checkUserId = useCallback((id: string) => {
     if (checkTimerRef.current) clearTimeout(checkTimerRef.current);
-    if (!id) { setIdStatus("idle"); return; }
-    if (!/^[a-zA-Z0-9][a-zA-Z0-9_-]{1,63}$/.test(id)) { setIdStatus("invalid"); return; }
+    if (!id) {
+      setIdStatus("idle");
+      return;
+    }
+    if (!/^[a-zA-Z0-9][a-zA-Z0-9_-]{1,63}$/.test(id)) {
+      setIdStatus("invalid");
+      return;
+    }
     setIdStatus("checking");
     checkTimerRef.current = setTimeout(async () => {
       try {
@@ -62,6 +68,14 @@ export function LoginModal({ open, onClose }: LoginModalProps) {
   function switchTab(next: AuthTab) {
     setTab(next);
     resetForm();
+  }
+
+  function handleBackdropPointerDown(e: React.PointerEvent<HTMLDivElement>) {
+    const target = e.target;
+    if (!(target instanceof Node)) return;
+    if (!dialogRef.current?.contains(target)) {
+      onClose();
+    }
   }
 
   async function handleGoogle() {
@@ -147,19 +161,26 @@ export function LoginModal({ open, onClose }: LoginModalProps) {
 
   return (
     <div
-      ref={overlayRef}
       className="fixed inset-0 z-[200] flex items-center justify-center"
-      onClick={(e) => { if (e.target === overlayRef.current) onClose(); }}
+      onPointerDown={handleBackdropPointerDown}
     >
       <div className="absolute inset-0 bg-rp-100/40 backdrop-blur-sm" />
-      <div className="relative w-full max-w-sm mx-4 rounded-xl border border-rp-border bg-rp-900 p-8 shadow-xl animate-scale-in">
+      <div
+        ref={dialogRef}
+        className="relative w-full max-w-sm mx-4 rounded-xl border border-rp-border bg-rp-900 p-8 shadow-xl animate-scale-in"
+      >
         <button
           onClick={onClose}
           className="absolute top-4 right-4 text-rp-muted hover:text-rp-100 transition-colors"
           type="button"
         >
-          <svg width="18" height="18" viewBox="0 0 18 18" fill="none">
-            <path d="M3 3l12 12M15 3L3 15" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" />
+          <svg aria-hidden="true" width="18" height="18" viewBox="0 0 18 18" fill="none">
+            <path
+              d="M3 3l12 12M15 3L3 15"
+              stroke="currentColor"
+              strokeWidth="1.5"
+              strokeLinecap="round"
+            />
           </svg>
         </button>
 
@@ -202,11 +223,23 @@ export function LoginModal({ open, onClose }: LoginModalProps) {
               disabled={loading}
               className="w-full flex items-center justify-center gap-3 rounded-lg border border-rp-border bg-rp-900 px-4 py-3 text-sm font-medium text-rp-100 transition-all hover:bg-rp-800 hover:border-rp-500 disabled:opacity-50"
             >
-              <svg width="18" height="18" viewBox="0 0 24 24">
-                <path fill="#4285F4" d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z" />
-                <path fill="#34A853" d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z" />
-                <path fill="#FBBC05" d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l2.85-2.22.81-.62z" />
-                <path fill="#EA4335" d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z" />
+              <svg aria-hidden="true" width="18" height="18" viewBox="0 0 24 24">
+                <path
+                  fill="#4285F4"
+                  d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z"
+                />
+                <path
+                  fill="#34A853"
+                  d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z"
+                />
+                <path
+                  fill="#FBBC05"
+                  d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l2.85-2.22.81-.62z"
+                />
+                <path
+                  fill="#EA4335"
+                  d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z"
+                />
               </svg>
               {loading ? "ログイン中..." : "Google でログイン"}
             </button>
@@ -241,7 +274,10 @@ export function LoginModal({ open, onClose }: LoginModalProps) {
               </button>
             </div>
 
-            <form onSubmit={tab === "solver-login" ? handleSolverLogin : handleSolverSignup} className="space-y-4">
+            <form
+              onSubmit={tab === "solver-login" ? handleSolverLogin : handleSolverSignup}
+              className="space-y-4"
+            >
               <div>
                 <label className="block text-xs text-rp-muted mb-1.5" htmlFor="userId">
                   ユーザーID
@@ -261,7 +297,9 @@ export function LoginModal({ open, onClose }: LoginModalProps) {
                   />
                   {tab === "solver-signup" && idStatus !== "idle" && (
                     <span className="absolute right-2.5 top-1/2 -translate-y-1/2 text-sm">
-                      {idStatus === "checking" && <span className="text-rp-muted animate-pulse">…</span>}
+                      {idStatus === "checking" && (
+                        <span className="text-rp-muted animate-pulse">…</span>
+                      )}
                       {idStatus === "available" && <span className="text-rp-success">✓</span>}
                       {idStatus === "taken" && <span className="text-rp-accent">✗</span>}
                       {idStatus === "invalid" && <span className="text-rp-accent">✗</span>}
@@ -303,9 +341,7 @@ export function LoginModal({ open, onClose }: LoginModalProps) {
                     placeholder="••••••••"
                     autoComplete="new-password"
                   />
-                  <p className="text-xs text-rp-muted mt-2">
-                    パスワードは3文字以上
-                  </p>
+                  <p className="text-xs text-rp-muted mt-2">パスワードは3文字以上</p>
                 </div>
               )}
               {tab === "solver-login" && (
@@ -314,14 +350,14 @@ export function LoginModal({ open, onClose }: LoginModalProps) {
                 </p>
               )}
               {error && <p className="text-sm text-rp-accent">{error}</p>}
-              <button
-                type="submit"
-                disabled={loading}
-                className="btn-primary w-full mt-2"
-              >
+              <button type="submit" disabled={loading} className="btn-primary w-full mt-2">
                 {loading
-                  ? tab === "solver-signup" ? "登録中..." : "ログイン中..."
-                  : tab === "solver-signup" ? "登録"  : "ログイン"}
+                  ? tab === "solver-signup"
+                    ? "登録中..."
+                    : "ログイン中..."
+                  : tab === "solver-signup"
+                    ? "登録"
+                    : "ログイン"}
               </button>
             </form>
           </>
