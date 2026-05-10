@@ -9,7 +9,7 @@ function getAdminApp(): App {
   if (existing) return existing;
 
   const serviceAccountPath = process.env.FIREBASE_SERVICE_ACCOUNT_PATH ?? "serviceAccountKey.json";
-  const absPath = resolve(process.cwd(), serviceAccountPath);
+  const absPath = resolve(/*turbopackIgnore: true*/ process.cwd(), serviceAccountPath);
 
   try {
     const json = JSON.parse(readFileSync(absPath, "utf-8")) as Record<string, string>;
