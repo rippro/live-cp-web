@@ -2,6 +2,8 @@ import type { Timestamp } from "firebase-admin/firestore";
 import Link from "next/link";
 import { getAdminFirestore } from "@/lib/firebase/admin";
 
+export const revalidate = 60;
+
 interface PageProps {
   params: Promise<{ eventId: string }>;
 }

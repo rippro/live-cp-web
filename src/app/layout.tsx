@@ -3,6 +3,7 @@ import "katex/dist/katex.min.css";
 import "./globals.css";
 import { AuthProvider } from "@/contexts/AuthContext";
 import { ThemeProvider } from "@/contexts/ThemeContext";
+import { NavigationProgress } from "@/components/ui/NavigationProgress";
 
 export const metadata: Metadata = {
   title: "RipPro Judge",
@@ -19,6 +20,7 @@ export default function RootLayout({
       <body className="bg-rp-900 text-rp-100 antialiased">
         <ThemeProvider>
           <AuthProvider>{children}</AuthProvider>
+          <NavigationProgress />
         </ThemeProvider>
       </body>
     </html>

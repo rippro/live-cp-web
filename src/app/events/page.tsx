@@ -1,6 +1,8 @@
 import Link from "next/link";
 import { GlobalNav } from "@/components/nav/GlobalNav";
 
+export const revalidate = 60;
+
 async function getEvents() {
   try {
     const { getAdminFirestore } = await import("@/lib/firebase/admin");
