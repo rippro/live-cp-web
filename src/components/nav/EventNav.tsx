@@ -10,7 +10,6 @@ interface EventNavProps {
 const tabs = [
   { key: "home", label: "Overview", href: (id: string) => `/events/${id}` },
   { key: "problems", label: "Problems", href: (id: string) => `/events/${id}/problems` },
-  { key: "submissions", label: "Submissions", href: (id: string) => `/events/${id}/submissions` },
   { key: "teams", label: "Teams", href: (id: string) => `/events/${id}/teams` },
   { key: "settings", label: "Settings", href: (id: string) => `/events/${id}/settings` },
   { key: "setup", label: "Setup", href: (id: string) => `/events/${id}/setup` },

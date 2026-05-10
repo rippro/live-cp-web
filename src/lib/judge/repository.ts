@@ -12,8 +12,6 @@ import type {
   Event,
   Problem,
   Solve,
-  Submission,
-  SubmissionCase,
   Team,
   TeamMember,
   Testcase,
@@ -27,11 +25,14 @@ export interface JudgeRepository {
   findEvent(id: string): Promise<Event | null>;
   findProblem(eventId: string, problemId: string): Promise<Problem | null>;
   listTestcases(eventId: string, problemId: string): Promise<Testcase[]>;
-  createAcceptedSubmission(input: {
-    submission: Omit<Submission, "id" | "createdAt">;
-    cases: Omit<SubmissionCase, "submissionId">[];
+  recordSolve(input: {
+    teamId: string;
+    userId: string;
+    eventId: string;
+    problemId: string;
+    caseIds: string[];
     solvedAt: Date;
-  }): Promise<{ submission: Submission; solve: Solve; isFirstSolve: boolean }>;
+  }): Promise<{ solve: Solve; isFirstSolve: boolean }>;
 }
 
 export interface JudgeAdminRepository {
@@ -107,60 +108,51 @@ export class FirestoreJudgeRepository implements JudgeRepository {
     return snapshot.docs.map(toTestcase).sort((a, b) => a.orderIndex - b.orderIndex);
   }
 
-  async createAcceptedSubmission(input: {
-    submission: Omit<Submission, "id" | "createdAt">;
-    cases: Omit<SubmissionCase, "submissionId">[];
+  async recordSolve(input: {
+    teamId: string;
+    userId: string;
+    eventId: string;
+    problemId: string;
+    caseIds: string[];
     solvedAt: Date;
-  }): Promise<{ submission: Submission; solve: Solve; isFirstSolve: boolean }> {
-    const submission: Submission = {
-      ...input.submission,
-      id: newId(),
-      createdAt: input.solvedAt,
-    };
+  }): Promise<{ solve: Solve; isFirstSolve: boolean }> {
     const solveRef = this.db
       .collection("solves")
-      .doc(solveDocumentId(submission.teamId, submission.eventId, submission.problemId));
-    const submissionRef = this.db.collection("submissions").doc(submission.id);
+      .doc(solveDocumentId(input.teamId, input.eventId, input.problemId));
 
     return this.db.runTransaction(async (transaction) => {
       const [userSnapshot, teamSnapshot, problemSnapshot, solveSnapshot, testcaseSnapshots] =
         await Promise.all([
-          transaction.get(this.db.collection("users").doc(submission.userId)),
-          transaction.get(this.db.collection("teams").doc(submission.teamId)),
+          transaction.get(this.db.collection("users").doc(input.userId)),
+          transaction.get(this.db.collection("teams").doc(input.teamId)),
           transaction.get(
             this.db
               .collection("problems")
-              .doc(problemDocumentId(submission.eventId, submission.problemId)),
+              .doc(problemDocumentId(input.eventId, input.problemId)),
           ),
           transaction.get(solveRef),
           Promise.all(
-            input.cases.map((submissionCase) =>
-              transaction.get(this.db.collection("testcases").doc(submissionCase.caseId)),
+            input.caseIds.map((caseId) =>
+              transaction.get(this.db.collection("testcases").doc(caseId)),
             ),
           ),
         ]);
 
-      assertExists(userSnapshot.exists, `users/${submission.userId}`);
-      assertExists(teamSnapshot.exists, `teams/${submission.teamId}`);
+      assertExists(userSnapshot.exists, `users/${input.userId}`);
+      assertExists(teamSnapshot.exists, `teams/${input.teamId}`);
       assertExists(
         problemSnapshot.exists,
-        `problems/${problemDocumentId(submission.eventId, submission.problemId)}`,
+        `problems/${problemDocumentId(input.eventId, input.problemId)}`,
       );
 
       for (const [index, testcaseSnapshot] of testcaseSnapshots.entries()) {
-        const testcase = testcaseSnapshot.exists
-          ? toTestcase(testcaseSnapshot as QueryDocumentSnapshot)
-          : null;
-        const submissionCase = input.cases[index];
-        assertExists(Boolean(testcase), `testcases/${submissionCase?.caseId ?? ""}`);
-        if (
-          !testcase ||
-          testcase.eventId !== submission.eventId ||
-          testcase.problemId !== submission.problemId
-        ) {
-          throw new Error(
-            "submissionCases.caseId must reference a testcase for the submission problem",
-          );
+        const caseId = input.caseIds[index] ?? "";
+        assertExists(testcaseSnapshot.exists, `testcases/${caseId}`);
+        if (testcaseSnapshot.exists) {
+          const tc = toTestcase(testcaseSnapshot as QueryDocumentSnapshot);
+          if (tc.eventId !== input.eventId || tc.problemId !== input.problemId) {
+            throw new Error("caseId must reference a testcase for the submission problem");
+          }
         }
       }
 
@@ -168,32 +160,14 @@ export class FirestoreJudgeRepository implements JudgeRepository {
         ? toSolve(solveSnapshot as QueryDocumentSnapshot)
         : null;
 
-      transaction.create(submissionRef, {
-        ...submission,
-        createdAt: Timestamp.fromDate(submission.createdAt),
-      });
-
-      for (const submissionCase of input.cases) {
-        transaction.create(
-          this.db
-            .collection("submissionCases")
-            .doc(submissionCaseDocumentId(submission.id, submissionCase.caseId)),
-          {
-            ...submissionCase,
-            submissionId: submission.id,
-          },
-        );
-      }
-
       if (existingSolve) {
-        return { submission, solve: existingSolve, isFirstSolve: false };
+        return { solve: existingSolve, isFirstSolve: false };
       }
 
       const solve: Solve = {
-        teamId: submission.teamId,
-        eventId: submission.eventId,
-        problemId: submission.problemId,
-        submissionId: submission.id,
+        teamId: input.teamId,
+        eventId: input.eventId,
+        problemId: input.problemId,
         solvedAt: input.solvedAt,
       };
       transaction.create(solveRef, {
@@ -201,7 +175,7 @@ export class FirestoreJudgeRepository implements JudgeRepository {
         solvedAt: Timestamp.fromDate(solve.solvedAt),
       });
 
-      return { submission, solve, isFirstSolve: true };
+      return { solve, isFirstSolve: true };
     });
   }
 }
@@ -234,7 +208,6 @@ export class FirestoreJudgeAdminRepository
       .doc(input.id)
       .create({
         isActive: input.isActive,
-        startsAt: Timestamp.fromDate(input.startsAt),
       });
 
     return input;
@@ -441,7 +414,6 @@ function toEvent(doc: QueryDocumentSnapshot): Event {
   return {
     id: doc.id,
     isActive: readBoolean(data, "isActive"),
-    startsAt: readDate(data, "startsAt"),
   };
 }
 
@@ -486,7 +458,6 @@ function toSolve(doc: QueryDocumentSnapshot): Solve {
     teamId: readString(data, "teamId"),
     eventId: readString(data, "eventId"),
     problemId: readString(data, "problemId"),
-    submissionId: readString(data, "submissionId"),
     solvedAt: readDate(data, "solvedAt"),
   };
 }
@@ -567,10 +538,6 @@ function teamMemberDocumentId(teamId: string, userId: string): string {
 
 function solveDocumentId(teamId: string, eventId: string, problemId: string): string {
   return encodeCompositeId([teamId, eventId, problemId]);
-}
-
-function submissionCaseDocumentId(submissionId: string, caseId: string): string {
-  return encodeCompositeId([submissionId, caseId]);
 }
 
 function cliTokenHashUniqueId(tokenHash: string): string {

@@ -38,7 +38,6 @@ export interface CliToken {
 export interface Event {
   id: string;
   isActive: boolean;
-  startsAt: Date;
 }
 
 export interface Problem {
@@ -65,30 +64,10 @@ export interface Testcase {
   createdAt: Date;
 }
 
-export interface Submission {
-  id: string;
-  userId: string;
-  teamId: string;
-  eventId: string;
-  problemId: string;
-  sourceHash: string;
-  status: "AC";
-  maxTimeMs: number;
-  createdAt: Date;
-}
-
-export interface SubmissionCase {
-  submissionId: string;
-  caseId: string;
-  status: "AC";
-  timeMs: number;
-}
-
 export interface Solve {
   teamId: string;
   eventId: string;
   problemId: string;
-  submissionId: string;
   solvedAt: Date;
 }
 
@@ -127,7 +106,6 @@ export interface AcSubmissionInput {
 }
 
 export interface AcSubmissionResponse {
-  submissionId: string;
   solved: boolean;
   solvedAt: string;
 }

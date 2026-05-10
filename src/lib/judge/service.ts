@@ -82,26 +82,16 @@ export async function createAcceptedSubmission(
   const testcases = await repository.listTestcases(eventId, problemId);
   assertSubmissionCasesMatchTestcases(input, testcases);
 
-  const result = await repository.createAcceptedSubmission({
-    submission: {
-      userId: auth.token.userId,
-      teamId: auth.token.teamId,
-      eventId,
-      problemId,
-      sourceHash: input.sourceHash,
-      status: "AC",
-      maxTimeMs: input.maxTimeMs,
-    },
-    cases: input.cases.map((submissionCase) => ({
-      caseId: submissionCase.caseId,
-      status: "AC",
-      timeMs: submissionCase.timeMs,
-    })),
+  const result = await repository.recordSolve({
+    teamId: auth.token.teamId,
+    userId: auth.token.userId,
+    eventId,
+    problemId,
+    caseIds: input.cases.map((c) => c.caseId),
     solvedAt: now,
   });
 
   return {
-    submissionId: result.submission.id,
     solved: result.isFirstSolve,
     solvedAt: result.solve.solvedAt.toISOString(),
   };

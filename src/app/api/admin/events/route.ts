@@ -48,19 +48,15 @@ export async function DELETE(request: Request) {
 
   const db = getAdminFirestore();
 
-  // 並列でeventId直引きできるコレクションを取得
-  const [teamsSnap, problemsSnap, testcasesSnap, submissionsSnap, solvesSnap] = await Promise.all([
+  const [teamsSnap, problemsSnap, testcasesSnap, solvesSnap] = await Promise.all([
     db.collection("teams").where("eventId", "==", eventId).get(),
     db.collection("problems").where("eventId", "==", eventId).get(),
     db.collection("testcases").where("eventId", "==", eventId).get(),
-    db.collection("submissions").where("eventId", "==", eventId).get(),
     db.collection("solves").where("eventId", "==", eventId).get(),
   ]);
 
   const teamIds = teamsSnap.docs.map((d) => d.id);
-  const submissionIds = submissionsSnap.docs.map((d) => d.id);
 
-  // teamId経由で取得が必要なもの
   const [teamMembersSnaps, cliTokensSnaps] = await Promise.all([
     Promise.all(
       teamIds.map((tid) => db.collection("teamMembers").where("teamId", "==", tid).get()),
@@ -70,26 +66,15 @@ export async function DELETE(request: Request) {
     ),
   ]);
 
-  // submissionId経由で取得が必要なもの
-  const submissionCasesSnaps = await Promise.all(
-    submissionIds.map((sid) =>
-      db.collection("submissionCases").where("submissionId", "==", sid).get(),
-    ),
-  );
-
-  // 削除対象のrefをまとめる
   const refs: FirebaseFirestore.DocumentReference[] = [
     db.collection("events").doc(eventId),
     ...teamsSnap.docs.map((d) => d.ref),
     ...problemsSnap.docs.map((d) => d.ref),
     ...testcasesSnap.docs.map((d) => d.ref),
-    ...submissionsSnap.docs.map((d) => d.ref),
     ...solvesSnap.docs.map((d) => d.ref),
     ...teamMembersSnaps.flatMap((s) => s.docs.map((d) => d.ref)),
-    ...submissionCasesSnaps.flatMap((s) => s.docs.map((d) => d.ref)),
   ];
 
-  // cliTokens + _unique (tokenHash)
   const cliTokenDocs = cliTokensSnaps.flatMap((s) => s.docs);
   for (const doc of cliTokenDocs) {
     refs.push(doc.ref);

@@ -44,14 +44,10 @@ export async function createAdminEvent(
   const event: Event = {
     id: readSlug(input, "id"),
     isActive: readOptionalBoolean(input, "isActive") ?? false,
-    startsAt: readDate(input, "startsAt"),
   };
   const created = await repository.createEvent(event);
 
-  return {
-    ...created,
-    startsAt: created.startsAt.toISOString(),
-  };
+  return { ...created };
 }
 
 export async function createAdminTeam(
@@ -258,15 +254,6 @@ function readPositiveInteger(record: Record<string, unknown>, key: string): numb
     throw badRequest(`${key} must be a positive integer`);
   }
   return value;
-}
-
-function readDate(record: Record<string, unknown>, key: string): Date {
-  const value = readString(record, key);
-  const date = new Date(value);
-  if (Number.isNaN(date.getTime())) {
-    throw badRequest(`${key} must be an ISO-8601 date`);
-  }
-  return date;
 }
 
 function readOptionalDate(record: Record<string, unknown>, key: string): Date | null {
