@@ -46,7 +46,8 @@ async function getSolveCountByProblem(eventId: string) {
 }
 
 export default async function ProblemsPage({ params }: PageProps) {
-  const { eventId } = await params;
+  const { eventId: _rawEventId } = await params;
+  const eventId = decodeURIComponent(_rawEventId);
   const session = await getSession();
   const showAll = session?.role === "admin" || session?.role === "creator";
 

@@ -50,7 +50,9 @@ async function getProblemWithTestcases(eventId: string, problemId: string, showA
 }
 
 export default async function ProblemPage({ params }: PageProps) {
-  const { eventId, problemId } = await params;
+  const { eventId: _rawEventId, problemId: _rawProblemId } = await params;
+  const eventId = decodeURIComponent(_rawEventId);
+  const problemId = decodeURIComponent(_rawProblemId);
   const session = await getSession();
   const showAll = session?.role === "admin" || session?.role === "creator";
   const problem = await getProblemWithTestcases(eventId, problemId, showAll);

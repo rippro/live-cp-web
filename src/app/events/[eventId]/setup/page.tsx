@@ -5,7 +5,8 @@ interface PageProps {
 }
 
 export default async function SetupPage({ params }: PageProps) {
-  const { eventId } = await params;
+  const { eventId: _rawEventId } = await params;
+  const eventId = decodeURIComponent(_rawEventId);
   const session = await getSession();
 
   return (

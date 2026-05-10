@@ -5,7 +5,9 @@ export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
 
 export async function GET(request: Request, context: { params: Promise<JudgeRouteParams> }) {
-  const { eventId, problemId } = await context.params;
+  const { eventId: _rawEventId, problemId: _rawProblemId } = await context.params;
+  const eventId = decodeURIComponent(_rawEventId);
+  const problemId = decodeURIComponent(_rawProblemId);
   const url = new URL(request.url);
 
   return withJudgeAuth(request, ({ repository, auth }) =>

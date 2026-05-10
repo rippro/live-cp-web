@@ -9,7 +9,8 @@ export async function GET(
   _request: Request,
   { params }: { params: Promise<{ eventId: string }> },
 ) {
-  const { eventId } = await params;
+  const { eventId: _rawEventId } = await params;
+  const eventId = decodeURIComponent(_rawEventId);
   const db = getAdminFirestore();
 
   const [eventSnap, problemsSnap, teamsSnap] = await Promise.all([

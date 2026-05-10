@@ -10,7 +10,8 @@ export async function GET(
   _req: Request,
   { params }: { params: Promise<{ eventId: string }> },
 ) {
-  const { eventId } = await params;
+  const { eventId: _rawEventId } = await params;
+  const eventId = decodeURIComponent(_rawEventId);
   const session = await getSession();
   if (!session) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
 

@@ -37,7 +37,8 @@ async function getEventData(eventId: string) {
 }
 
 export default async function EventHomePage({ params }: PageProps) {
-  const { eventId } = await params;
+  const { eventId: _rawEventId } = await params;
+  const eventId = decodeURIComponent(_rawEventId);
   const event = await getEventData(eventId);
 
   if (!event) {

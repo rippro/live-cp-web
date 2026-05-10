@@ -7,7 +7,8 @@ interface EventLayoutProps {
 }
 
 export default async function EventLayout({ children, params }: EventLayoutProps) {
-  const { eventId } = await params;
+  const { eventId: _rawEventId } = await params;
+  const eventId = decodeURIComponent(_rawEventId);
 
   return (
     <>

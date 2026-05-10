@@ -14,7 +14,9 @@ export async function GET(
   _req: Request,
   { params }: { params: Promise<{ eventId: string; problemId: string }> },
 ) {
-  const { eventId, problemId } = await params;
+  const { eventId: _rawEventId, problemId: _rawProblemId } = await params;
+  const eventId = decodeURIComponent(_rawEventId);
+  const problemId = decodeURIComponent(_rawProblemId);
   const session = await getSession();
   const db = getAdminFirestore();
   const snap = await db.collection("problems").doc(docId(eventId, problemId)).get();
@@ -48,7 +50,9 @@ export async function PATCH(
   request: Request,
   { params }: { params: Promise<{ eventId: string; problemId: string }> },
 ) {
-  const { eventId, problemId } = await params;
+  const { eventId: _rawEventId, problemId: _rawProblemId } = await params;
+  const eventId = decodeURIComponent(_rawEventId);
+  const problemId = decodeURIComponent(_rawProblemId);
   const session = await getSession();
   if (!session || (session.role !== "admin" && session.role !== "creator")) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
@@ -89,7 +93,9 @@ export async function DELETE(
   _req: Request,
   { params }: { params: Promise<{ eventId: string; problemId: string }> },
 ) {
-  const { eventId, problemId } = await params;
+  const { eventId: _rawEventId, problemId: _rawProblemId } = await params;
+  const eventId = decodeURIComponent(_rawEventId);
+  const problemId = decodeURIComponent(_rawProblemId);
   const session = await getSession();
   if (!session || (session.role !== "admin" && session.role !== "creator")) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
