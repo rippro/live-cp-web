@@ -1,5 +1,3 @@
-import { devCliToken } from "@/lib/judge/repository";
-
 const eventId = "rippro-2026-spring";
 const problemId = "001";
 
@@ -60,14 +58,22 @@ export default function Home() {
           </div>
 
           <div className="rounded-lg border border-border bg-card p-5">
-            <h2 className="text-lg font-semibold">開発用シード</h2>
+            <h2 className="text-lg font-semibold">管理API</h2>
             <dl className="mt-4 grid gap-3 text-sm sm:grid-cols-[9rem_1fr]">
-              <dt className="text-muted-foreground">eventId</dt>
-              <dd className="font-mono">{eventId}</dd>
-              <dt className="text-muted-foreground">problemId</dt>
-              <dd className="font-mono">{problemId}</dd>
-              <dt className="text-muted-foreground">token</dt>
-              <dd className="break-all font-mono">{devCliToken}</dd>
+              <dt className="text-muted-foreground">auth</dt>
+              <dd className="font-mono">Authorization: Bearer $RJ_ADMIN_TOKEN</dd>
+              <dt className="text-muted-foreground">users</dt>
+              <dd className="font-mono">POST /admin/users</dd>
+              <dt className="text-muted-foreground">events</dt>
+              <dd className="font-mono">POST /admin/events</dd>
+              <dt className="text-muted-foreground">teams</dt>
+              <dd className="font-mono">POST /admin/teams</dd>
+              <dt className="text-muted-foreground">problems</dt>
+              <dd className="font-mono">POST /admin/problems</dd>
+              <dt className="text-muted-foreground">testcases</dt>
+              <dd className="font-mono">POST /admin/testcase-versions</dd>
+              <dt className="text-muted-foreground">tokens</dt>
+              <dd className="font-mono">POST /admin/cli-tokens</dd>
             </dl>
           </div>
         </div>

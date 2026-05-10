@@ -1,0 +1,372 @@
+import { timingSafeEqual } from "node:crypto";
+import { NextResponse } from "next/server";
+import { generateCliToken, generateInviteCode, hashPassword, sha256Hex } from "./crypto";
+import { badRequest, forbidden, JudgeError, unauthorized } from "./errors";
+import { createJudgeAdminRepository } from "./repository";
+import type { CompareMode, Event, Problem, TestcaseType } from "./types";
+
+export async function withAdmin<T>(
+  request: Request,
+  handler: (context: { repository: ReturnType<typeof createJudgeAdminRepository> }) => Promise<T>,
+): Promise<NextResponse<T | ErrorResponse>> {
+  try {
+    authenticateAdmin(request.headers.get("authorization"));
+    const repository = createJudgeAdminRepository();
+    const body = await handler({ repository });
+    return NextResponse.json(body, { status: 201 });
+  } catch (error) {
+    return toErrorResponse(error);
+  }
+}
+
+export async function createAdminUser(
+  repository: ReturnType<typeof createJudgeAdminRepository>,
+  body: unknown,
+) {
+  const input = readRecord(body);
+  const id = readId(input, "id");
+  const password = readString(input, "password");
+  const createdAt = new Date();
+  const user = await repository.createUser({
+    id,
+    passwordHash: await hashPassword(password),
+    createdAt,
+  });
+
+  return { id: user.id, createdAt: user.createdAt.toISOString() };
+}
+
+export async function createAdminEvent(
+  repository: ReturnType<typeof createJudgeAdminRepository>,
+  body: unknown,
+) {
+  const input = readRecord(body);
+  const event: Event = {
+    id: readSlug(input, "id"),
+    isActive: readOptionalBoolean(input, "isActive") ?? false,
+    startsAt: readDate(input, "startsAt"),
+    endsAt: readDate(input, "endsAt"),
+  };
+  const created = await repository.createEvent(event);
+
+  return {
+    ...created,
+    startsAt: created.startsAt.toISOString(),
+    endsAt: created.endsAt.toISOString(),
+  };
+}
+
+export async function createAdminTeam(
+  repository: ReturnType<typeof createJudgeAdminRepository>,
+  body: unknown,
+) {
+  const input = readRecord(body);
+  const inviteCode = readOptionalString(input, "inviteCode") ?? generateInviteCode();
+  const result = await repository.createTeam({
+    eventId: readSlug(input, "eventId"),
+    name: readString(input, "name"),
+    ownerUserId: readId(input, "ownerUserId"),
+    inviteCodeHash: sha256Hex(inviteCode),
+    createdAt: new Date(),
+  });
+
+  return {
+    team: {
+      id: result.team.id,
+      eventId: result.team.eventId,
+      name: result.team.name,
+      createdAt: result.team.createdAt.toISOString(),
+    },
+    ownerMembership: {
+      ...result.ownerMembership,
+      joinedAt: result.ownerMembership.joinedAt.toISOString(),
+    },
+    inviteCode,
+  };
+}
+
+export async function createAdminProblem(
+  repository: ReturnType<typeof createJudgeAdminRepository>,
+  body: unknown,
+) {
+  const input = readRecord(body);
+  const now = new Date();
+  const compareMode = readString(input, "compareMode");
+  if (compareMode !== "trimmed-exact") {
+    throw badRequest("compareMode must be trimmed-exact");
+  }
+
+  const problem: Problem = {
+    eventId: readSlug(input, "eventId"),
+    id: readProblemId(input, "id"),
+    title: readString(input, "title"),
+    statement: readString(input, "statement"),
+    constraints: readString(input, "constraints"),
+    inputFormat: readString(input, "inputFormat"),
+    outputFormat: readString(input, "outputFormat"),
+    allowedLanguages: readStringArray(input, "allowedLanguages"),
+    timeLimitMs: readPositiveInteger(input, "timeLimitMs"),
+    compareMode: compareMode as CompareMode,
+    testcaseVersion: readString(input, "testcaseVersion"),
+    isPublished: readOptionalBoolean(input, "isPublished") ?? false,
+    createdAt: now,
+    updatedAt: now,
+  };
+  const created = await repository.createProblem(problem);
+
+  return serializeProblem(created);
+}
+
+export async function createAdminTestcaseVersion(
+  repository: ReturnType<typeof createJudgeAdminRepository>,
+  body: unknown,
+) {
+  const input = readRecord(body);
+  const casesValue = input.cases;
+  if (!Array.isArray(casesValue) || casesValue.length === 0) {
+    throw badRequest("cases must be a non-empty array");
+  }
+
+  const cases = casesValue.map((value, index) => {
+    const testcase = readRecord(value, `cases[${index}]`);
+    const type = readString(testcase, "type");
+    if (type !== "sample" && type !== "hidden") {
+      throw badRequest(`cases[${index}].type must be sample or hidden`);
+    }
+
+    return {
+      type: type as TestcaseType,
+      input: readString(testcase, "input"),
+      expectedOutput: readString(testcase, "expectedOutput"),
+      showOnFailure: readBoolean(testcase, "showOnFailure"),
+      orderIndex: readNonNegativeInteger(testcase, "orderIndex"),
+    };
+  });
+
+  const created = await repository.createTestcaseVersion({
+    eventId: readSlug(input, "eventId"),
+    problemId: readProblemId(input, "problemId"),
+    version: readString(input, "version"),
+    cases,
+    createdAt: new Date(),
+    setCurrent: readOptionalBoolean(input, "setCurrent") ?? true,
+  });
+
+  return {
+    cases: created.map((testcase) => ({
+      ...testcase,
+      createdAt: testcase.createdAt.toISOString(),
+    })),
+  };
+}
+
+export async function createAdminCliToken(
+  repository: ReturnType<typeof createJudgeAdminRepository>,
+  body: unknown,
+) {
+  const input = readRecord(body);
+  const plainToken = generateCliToken();
+  const created = await repository.createCliToken({
+    userId: readId(input, "userId"),
+    teamId: readString(input, "teamId"),
+    tokenHash: sha256Hex(plainToken),
+    label: readOptionalString(input, "label"),
+    expiresAt: readOptionalDate(input, "expiresAt"),
+    createdAt: new Date(),
+  });
+
+  return {
+    token: plainToken,
+    cliToken: {
+      id: created.id,
+      userId: created.userId,
+      teamId: created.teamId,
+      label: created.label,
+      expiresAt: created.expiresAt?.toISOString() ?? null,
+      createdAt: created.createdAt.toISOString(),
+    },
+  };
+}
+
+function authenticateAdmin(authorization: string | null): void {
+  const configuredToken = process.env.RJ_ADMIN_TOKEN;
+  if (!configuredToken) {
+    throw forbidden("RJ_ADMIN_TOKEN is not configured");
+  }
+  if (!authorization) {
+    throw unauthorized();
+  }
+
+  const [scheme, token, extra] = authorization.split(" ");
+  if (scheme !== "Bearer" || !token || extra !== undefined) {
+    throw unauthorized();
+  }
+
+  const expected = Buffer.from(configuredToken);
+  const actual = Buffer.from(token);
+  if (expected.length !== actual.length || !timingSafeEqual(expected, actual)) {
+    throw unauthorized();
+  }
+}
+
+function toErrorResponse(error: unknown): NextResponse<ErrorResponse> {
+  if (error instanceof JudgeError) {
+    return NextResponse.json(
+      { error: { code: error.code, message: error.message } },
+      { status: error.status },
+    );
+  }
+
+  if (error instanceof Error && /already exists|ALREADY_EXISTS/i.test(error.message)) {
+    return NextResponse.json(
+      { error: { code: "CONFLICT", message: error.message } },
+      { status: 409 },
+    );
+  }
+
+  if (error instanceof Error && /Missing required foreign key document/.test(error.message)) {
+    return NextResponse.json(
+      { error: { code: "BAD_REQUEST", message: error.message } },
+      { status: 400 },
+    );
+  }
+
+  console.error(error);
+  return NextResponse.json(
+    { error: { code: "INTERNAL_ERROR", message: "Internal Server Error" } },
+    { status: 500 },
+  );
+}
+
+interface ErrorResponse {
+  error: {
+    code: string;
+    message: string;
+  };
+}
+
+function readRecord(value: unknown, label = "request body"): Record<string, unknown> {
+  if (typeof value !== "object" || value === null || Array.isArray(value)) {
+    throw badRequest(`${label} must be an object`);
+  }
+  return value as Record<string, unknown>;
+}
+
+function readString(record: Record<string, unknown>, key: string): string {
+  const value = record[key];
+  if (typeof value !== "string" || value.length === 0) {
+    throw badRequest(`${key} must be a non-empty string`);
+  }
+  return value;
+}
+
+function readOptionalString(record: Record<string, unknown>, key: string): string | null {
+  const value = record[key];
+  if (value === undefined || value === null || value === "") {
+    return null;
+  }
+  if (typeof value !== "string") {
+    throw badRequest(`${key} must be a string`);
+  }
+  return value;
+}
+
+function readStringArray(record: Record<string, unknown>, key: string): string[] {
+  const value = record[key];
+  if (
+    !Array.isArray(value) ||
+    value.length === 0 ||
+    value.some((item) => typeof item !== "string")
+  ) {
+    throw badRequest(`${key} must be a non-empty string array`);
+  }
+  return value as string[];
+}
+
+function readBoolean(record: Record<string, unknown>, key: string): boolean {
+  const value = record[key];
+  if (typeof value !== "boolean") {
+    throw badRequest(`${key} must be a boolean`);
+  }
+  return value;
+}
+
+function readOptionalBoolean(record: Record<string, unknown>, key: string): boolean | null {
+  const value = record[key];
+  if (value === undefined || value === null) {
+    return null;
+  }
+  if (typeof value !== "boolean") {
+    throw badRequest(`${key} must be a boolean`);
+  }
+  return value;
+}
+
+function readPositiveInteger(record: Record<string, unknown>, key: string): number {
+  const value = record[key];
+  if (typeof value !== "number" || !Number.isInteger(value) || value <= 0) {
+    throw badRequest(`${key} must be a positive integer`);
+  }
+  return value;
+}
+
+function readNonNegativeInteger(record: Record<string, unknown>, key: string): number {
+  const value = record[key];
+  if (typeof value !== "number" || !Number.isInteger(value) || value < 0) {
+    throw badRequest(`${key} must be a non-negative integer`);
+  }
+  return value;
+}
+
+function readDate(record: Record<string, unknown>, key: string): Date {
+  const value = readString(record, key);
+  const date = new Date(value);
+  if (Number.isNaN(date.getTime())) {
+    throw badRequest(`${key} must be an ISO-8601 date`);
+  }
+  return date;
+}
+
+function readOptionalDate(record: Record<string, unknown>, key: string): Date | null {
+  const value = readOptionalString(record, key);
+  if (!value) {
+    return null;
+  }
+  const date = new Date(value);
+  if (Number.isNaN(date.getTime())) {
+    throw badRequest(`${key} must be an ISO-8601 date`);
+  }
+  return date;
+}
+
+function readId(record: Record<string, unknown>, key: string): string {
+  const value = readString(record, key);
+  if (!/^[a-zA-Z0-9][a-zA-Z0-9_-]{1,63}$/.test(value)) {
+    throw badRequest(`${key} must be 2-64 characters of letters, numbers, underscore, or hyphen`);
+  }
+  return value;
+}
+
+function readSlug(record: Record<string, unknown>, key: string): string {
+  const value = readString(record, key);
+  if (!/^[a-z0-9][a-z0-9-]{1,79}$/.test(value)) {
+    throw badRequest(`${key} must be a lowercase slug`);
+  }
+  return value;
+}
+
+function readProblemId(record: Record<string, unknown>, key: string): string {
+  const value = readString(record, key);
+  if (!/^[a-zA-Z0-9_-]{1,32}$/.test(value)) {
+    throw badRequest(`${key} must be 1-32 characters of letters, numbers, underscore, or hyphen`);
+  }
+  return value;
+}
+
+function serializeProblem(problem: Problem) {
+  return {
+    ...problem,
+    createdAt: problem.createdAt.toISOString(),
+    updatedAt: problem.updatedAt.toISOString(),
+  };
+}

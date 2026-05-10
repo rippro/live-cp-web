@@ -1,11 +1,11 @@
-import { getAdminFirestore } from "@/lib/firebase/admin";
 import {
   type DocumentData,
   type Firestore,
   type QueryDocumentSnapshot,
   Timestamp,
 } from "firebase-admin/firestore";
-import { newId, sha256Hex } from "./crypto";
+import { getAdminFirestore } from "@/lib/firebase/admin";
+import { newId } from "./crypto";
 import type {
   CliToken,
   CompareMode,
@@ -15,6 +15,7 @@ import type {
   Submission,
   SubmissionCase,
   Team,
+  TeamMember,
   Testcase,
   TestcaseType,
   User,
@@ -34,206 +35,38 @@ export interface JudgeRepository {
   }): Promise<{ submission: Submission; solve: Solve; isFirstSolve: boolean }>;
 }
 
-interface MemoryStore {
-  users: User[];
-  teams: Team[];
-  cliTokens: CliToken[];
-  events: Event[];
-  problems: Problem[];
-  testcases: Testcase[];
-  submissions: Submission[];
-  submissionCases: SubmissionCase[];
-  solves: Solve[];
-}
-
-export const devCliToken = process.env.RJ_DEV_TOKEN ?? "rj_live_0123456789abcdefghijklmnopqrstuv";
-
-function createSeedStore(now = new Date()): MemoryStore {
-  const eventId = "rippro-2026-spring";
-  const teamId = "01JUDGEDEVTEAM000000000000";
-
-  return {
-    users: [
-      {
-        id: "demo",
-        passwordHash: sha256Hex("demo-password"),
-        createdAt: now,
-      },
-    ],
-    teams: [
-      {
-        id: teamId,
-        eventId,
-        name: "Demo Team",
-        inviteCodeHash: sha256Hex("demo-invite"),
-        createdAt: now,
-      },
-    ],
-    cliTokens: [
-      {
-        id: "01JUDGEDEVTOKEN0000000000",
-        userId: "demo",
-        teamId,
-        tokenHash: sha256Hex(devCliToken),
-        label: "development seed token",
-        expiresAt: null,
-        lastUsedAt: null,
-        createdAt: now,
-        revokedAt: null,
-      },
-    ],
-    events: [
-      {
-        id: eventId,
-        isActive: true,
-        startsAt: new Date("2026-04-01T00:00:00.000Z"),
-        endsAt: new Date("2026-06-01T00:00:00.000Z"),
-      },
-    ],
-    problems: [
-      {
-        eventId,
-        id: "001",
-        title: "A + B",
-        statement: "整数 A と B が与えられるので、その和を出力してください。",
-        constraints: "0 <= A, B <= 100",
-        inputFormat: "A B",
-        outputFormat: "A + B を1行に出力してください。",
-        allowedLanguages: ["cpp", "python"],
-        timeLimitMs: 2000,
-        compareMode: "trimmed-exact",
-        testcaseVersion: "v1",
-        isPublished: true,
-        createdAt: now,
-        updatedAt: now,
-      },
-    ],
-    testcases: [
-      {
-        id: "01JUDGEDEVCASE00000000001",
-        eventId,
-        problemId: "001",
-        version: "v1",
-        type: "sample",
-        input: "1 2\n",
-        expectedOutput: "3\n",
-        showOnFailure: true,
-        orderIndex: 1,
-        createdAt: now,
-      },
-      {
-        id: "01JUDGEDEVCASE00000000002",
-        eventId,
-        problemId: "001",
-        version: "v1",
-        type: "hidden",
-        input: "40 2\n",
-        expectedOutput: "42\n",
-        showOnFailure: false,
-        orderIndex: 2,
-        createdAt: now,
-      },
-    ],
-    submissions: [],
-    submissionCases: [],
-    solves: [],
-  };
-}
-
-const globalForStore = globalThis as typeof globalThis & {
-  __ripproJudgeStore?: MemoryStore;
-};
-
-export class MemoryJudgeRepository implements JudgeRepository {
-  private readonly store: MemoryStore;
-
-  constructor(store = getMemoryStore()) {
-    this.store = store;
-  }
-
-  async findCliTokenByHash(tokenHash: string): Promise<CliToken | null> {
-    return this.store.cliTokens.find((token) => token.tokenHash === tokenHash) ?? null;
-  }
-
-  async touchCliToken(id: string, usedAt: Date): Promise<void> {
-    const token = this.store.cliTokens.find((candidate) => candidate.id === id);
-    if (token) {
-      token.lastUsedAt = usedAt;
-    }
-  }
-
-  async findTeam(id: string): Promise<Team | null> {
-    return this.store.teams.find((team) => team.id === id) ?? null;
-  }
-
-  async findEvent(id: string): Promise<Event | null> {
-    return this.store.events.find((event) => event.id === id) ?? null;
-  }
-
-  async findProblem(eventId: string, problemId: string): Promise<Problem | null> {
-    return (
-      this.store.problems.find(
-        (problem) => problem.eventId === eventId && problem.id === problemId,
-      ) ?? null
-    );
-  }
-
-  async listTestcases(eventId: string, problemId: string, version: string): Promise<Testcase[]> {
-    return this.store.testcases
-      .filter(
-        (testcase) =>
-          testcase.eventId === eventId &&
-          testcase.problemId === problemId &&
-          testcase.version === version,
-      )
-      .sort((left, right) => left.orderIndex - right.orderIndex);
-  }
-
-  async createAcceptedSubmission(input: {
-    submission: Omit<Submission, "id" | "createdAt">;
-    cases: Omit<SubmissionCase, "submissionId">[];
-    solvedAt: Date;
-  }): Promise<{ submission: Submission; solve: Solve; isFirstSolve: boolean }> {
-    const submission: Submission = {
-      ...input.submission,
-      id: newId(),
-      createdAt: input.solvedAt,
-    };
-
-    this.store.submissions.push(submission);
-    for (const submissionCase of input.cases) {
-      this.store.submissionCases.push({
-        ...submissionCase,
-        submissionId: submission.id,
-      });
-    }
-
-    const existingSolve = this.store.solves.find(
-      (solve) =>
-        solve.teamId === submission.teamId &&
-        solve.eventId === submission.eventId &&
-        solve.problemId === submission.problemId,
-    );
-
-    if (existingSolve) {
-      return { submission, solve: existingSolve, isFirstSolve: false };
-    }
-
-    const solve: Solve = {
-      teamId: submission.teamId,
-      eventId: submission.eventId,
-      problemId: submission.problemId,
-      submissionId: submission.id,
-      solvedAt: input.solvedAt,
-    };
-    this.store.solves.push(solve);
-
-    return { submission, solve, isFirstSolve: true };
-  }
+export interface JudgeAdminRepository {
+  createUser(input: { id: string; passwordHash: string; createdAt: Date }): Promise<User>;
+  createEvent(input: Event): Promise<Event>;
+  createTeam(input: {
+    id?: string;
+    eventId: string;
+    name: string;
+    inviteCodeHash: string;
+    ownerUserId: string;
+    createdAt: Date;
+  }): Promise<{ team: Team; ownerMembership: TeamMember }>;
+  createProblem(input: Problem): Promise<Problem>;
+  createTestcaseVersion(input: {
+    eventId: string;
+    problemId: string;
+    version: string;
+    cases: Array<Omit<Testcase, "id" | "eventId" | "problemId" | "version" | "createdAt">>;
+    createdAt: Date;
+    setCurrent: boolean;
+  }): Promise<Testcase[]>;
+  createCliToken(input: {
+    userId: string;
+    teamId: string;
+    tokenHash: string;
+    label: string | null;
+    expiresAt: Date | null;
+    createdAt: Date;
+  }): Promise<CliToken>;
 }
 
 export class FirestoreJudgeRepository implements JudgeRepository {
-  constructor(private readonly db: Firestore = getAdminFirestore()) {}
+  constructor(protected readonly db: Firestore = getAdminFirestore()) {}
 
   async findCliTokenByHash(tokenHash: string): Promise<CliToken | null> {
     const snapshot = await this.db
@@ -267,12 +100,9 @@ export class FirestoreJudgeRepository implements JudgeRepository {
   async findProblem(eventId: string, problemId: string): Promise<Problem | null> {
     const snapshot = await this.db
       .collection("problems")
-      .where("eventId", "==", eventId)
-      .where("id", "==", problemId)
-      .limit(1)
+      .doc(problemDocumentId(eventId, problemId))
       .get();
-    const problemDoc = snapshot.docs[0];
-    return problemDoc ? toProblem(problemDoc) : null;
+    return snapshot.exists ? toProblem(snapshot as QueryDocumentSnapshot) : null;
   }
 
   async listTestcases(eventId: string, problemId: string, version: string): Promise<Testcase[]> {
@@ -297,12 +127,54 @@ export class FirestoreJudgeRepository implements JudgeRepository {
       id: newId(),
       createdAt: input.solvedAt,
     };
-    const solveId = solveDocumentId(submission.teamId, submission.eventId, submission.problemId);
-    const solveRef = this.db.collection("solves").doc(solveId);
+    const solveRef = this.db
+      .collection("solves")
+      .doc(solveDocumentId(submission.teamId, submission.eventId, submission.problemId));
     const submissionRef = this.db.collection("submissions").doc(submission.id);
 
     return this.db.runTransaction(async (transaction) => {
-      const solveSnapshot = await transaction.get(solveRef);
+      const [userSnapshot, teamSnapshot, problemSnapshot, solveSnapshot, testcaseSnapshots] =
+        await Promise.all([
+          transaction.get(this.db.collection("users").doc(submission.userId)),
+          transaction.get(this.db.collection("teams").doc(submission.teamId)),
+          transaction.get(
+            this.db
+              .collection("problems")
+              .doc(problemDocumentId(submission.eventId, submission.problemId)),
+          ),
+          transaction.get(solveRef),
+          Promise.all(
+            input.cases.map((submissionCase) =>
+              transaction.get(this.db.collection("testcases").doc(submissionCase.caseId)),
+            ),
+          ),
+        ]);
+
+      assertExists(userSnapshot.exists, `users/${submission.userId}`);
+      assertExists(teamSnapshot.exists, `teams/${submission.teamId}`);
+      assertExists(
+        problemSnapshot.exists,
+        `problems/${problemDocumentId(submission.eventId, submission.problemId)}`,
+      );
+
+      for (const [index, testcaseSnapshot] of testcaseSnapshots.entries()) {
+        const testcase = testcaseSnapshot.exists
+          ? toTestcase(testcaseSnapshot as QueryDocumentSnapshot)
+          : null;
+        const submissionCase = input.cases[index];
+        assertExists(Boolean(testcase), `testcases/${submissionCase?.caseId ?? ""}`);
+        if (
+          !testcase ||
+          testcase.eventId !== submission.eventId ||
+          testcase.problemId !== submission.problemId ||
+          testcase.version !== submission.testcaseVersion
+        ) {
+          throw new Error(
+            "submissionCases.caseId must reference a testcase for the submission problem/version",
+          );
+        }
+      }
+
       const existingSolve = solveSnapshot.exists
         ? toSolve(solveSnapshot as QueryDocumentSnapshot)
         : null;
@@ -313,13 +185,15 @@ export class FirestoreJudgeRepository implements JudgeRepository {
       });
 
       for (const submissionCase of input.cases) {
-        const caseRef = this.db
-          .collection("submissionCases")
-          .doc(submissionCaseDocumentId(submission.id, submissionCase.caseId));
-        transaction.create(caseRef, {
-          ...submissionCase,
-          submissionId: submission.id,
-        });
+        transaction.create(
+          this.db
+            .collection("submissionCases")
+            .doc(submissionCaseDocumentId(submission.id, submissionCase.caseId)),
+          {
+            ...submissionCase,
+            submissionId: submission.id,
+          },
+        );
       }
 
       if (existingSolve) {
@@ -343,16 +217,238 @@ export class FirestoreJudgeRepository implements JudgeRepository {
   }
 }
 
-function getMemoryStore(): MemoryStore {
-  if (!globalForStore.__ripproJudgeStore) {
-    globalForStore.__ripproJudgeStore = createSeedStore();
+export class FirestoreJudgeAdminRepository
+  extends FirestoreJudgeRepository
+  implements JudgeAdminRepository
+{
+  async createUser(input: { id: string; passwordHash: string; createdAt: Date }): Promise<User> {
+    const user: User = {
+      id: input.id,
+      passwordHash: input.passwordHash,
+      createdAt: input.createdAt,
+    };
+
+    await this.db
+      .collection("users")
+      .doc(user.id)
+      .create({
+        passwordHash: user.passwordHash,
+        createdAt: Timestamp.fromDate(user.createdAt),
+      });
+
+    return user;
   }
 
-  return globalForStore.__ripproJudgeStore;
+  async createEvent(input: Event): Promise<Event> {
+    await this.db
+      .collection("events")
+      .doc(input.id)
+      .create({
+        isActive: input.isActive,
+        startsAt: Timestamp.fromDate(input.startsAt),
+        endsAt: Timestamp.fromDate(input.endsAt),
+      });
+
+    return input;
+  }
+
+  async createTeam(input: {
+    id?: string;
+    eventId: string;
+    name: string;
+    inviteCodeHash: string;
+    ownerUserId: string;
+    createdAt: Date;
+  }): Promise<{ team: Team; ownerMembership: TeamMember }> {
+    const team: Team = {
+      id: input.id ?? newId(),
+      eventId: input.eventId,
+      name: input.name,
+      inviteCodeHash: input.inviteCodeHash,
+      createdAt: input.createdAt,
+    };
+    const ownerMembership: TeamMember = {
+      teamId: team.id,
+      userId: input.ownerUserId,
+      role: "owner",
+      joinedAt: input.createdAt,
+    };
+
+    await this.db.runTransaction(async (transaction) => {
+      const [eventSnapshot, userSnapshot] = await Promise.all([
+        transaction.get(this.db.collection("events").doc(team.eventId)),
+        transaction.get(this.db.collection("users").doc(ownerMembership.userId)),
+      ]);
+
+      assertExists(eventSnapshot.exists, `events/${team.eventId}`);
+      assertExists(userSnapshot.exists, `users/${ownerMembership.userId}`);
+
+      transaction.create(this.db.collection("teams").doc(team.id), {
+        eventId: team.eventId,
+        name: team.name,
+        inviteCodeHash: team.inviteCodeHash,
+        createdAt: Timestamp.fromDate(team.createdAt),
+      });
+      transaction.create(
+        this.db
+          .collection("teamMembers")
+          .doc(teamMemberDocumentId(ownerMembership.teamId, ownerMembership.userId)),
+        {
+          ...ownerMembership,
+          joinedAt: Timestamp.fromDate(ownerMembership.joinedAt),
+        },
+      );
+    });
+
+    return { team, ownerMembership };
+  }
+
+  async createProblem(input: Problem): Promise<Problem> {
+    await this.db.runTransaction(async (transaction) => {
+      const eventSnapshot = await transaction.get(this.db.collection("events").doc(input.eventId));
+      assertExists(eventSnapshot.exists, `events/${input.eventId}`);
+
+      transaction.create(
+        this.db.collection("problems").doc(problemDocumentId(input.eventId, input.id)),
+        {
+          ...input,
+          createdAt: Timestamp.fromDate(input.createdAt),
+          updatedAt: Timestamp.fromDate(input.updatedAt),
+        },
+      );
+    });
+
+    return input;
+  }
+
+  async createTestcaseVersion(input: {
+    eventId: string;
+    problemId: string;
+    version: string;
+    cases: Array<Omit<Testcase, "id" | "eventId" | "problemId" | "version" | "createdAt">>;
+    createdAt: Date;
+    setCurrent: boolean;
+  }): Promise<Testcase[]> {
+    const testcases: Testcase[] = input.cases.map((testcase) => ({
+      ...testcase,
+      id: newId(),
+      eventId: input.eventId,
+      problemId: input.problemId,
+      version: input.version,
+      createdAt: input.createdAt,
+    }));
+
+    await this.db.runTransaction(async (transaction) => {
+      const problemRef = this.db
+        .collection("problems")
+        .doc(problemDocumentId(input.eventId, input.problemId));
+      const [problemSnapshot, existingVersionSnapshot] = await Promise.all([
+        transaction.get(problemRef),
+        transaction.get(
+          this.db
+            .collection("testcases")
+            .where("eventId", "==", input.eventId)
+            .where("problemId", "==", input.problemId)
+            .where("version", "==", input.version)
+            .limit(1),
+        ),
+      ]);
+
+      assertExists(
+        problemSnapshot.exists,
+        `problems/${problemDocumentId(input.eventId, input.problemId)}`,
+      );
+      if (!existingVersionSnapshot.empty) {
+        throw new Error("testcase version already exists for this problem");
+      }
+
+      for (const testcase of testcases) {
+        const uniqueOrderRef = this.db
+          .collection("_unique")
+          .doc(
+            testcaseOrderUniqueId(
+              testcase.eventId,
+              testcase.problemId,
+              testcase.version,
+              testcase.orderIndex,
+            ),
+          );
+        transaction.create(uniqueOrderRef, { testcaseId: testcase.id });
+        transaction.create(this.db.collection("testcases").doc(testcase.id), {
+          ...testcase,
+          createdAt: Timestamp.fromDate(testcase.createdAt),
+        });
+      }
+
+      if (input.setCurrent) {
+        transaction.update(problemRef, {
+          testcaseVersion: input.version,
+          updatedAt: Timestamp.fromDate(input.createdAt),
+        });
+      }
+    });
+
+    return testcases;
+  }
+
+  async createCliToken(input: {
+    userId: string;
+    teamId: string;
+    tokenHash: string;
+    label: string | null;
+    expiresAt: Date | null;
+    createdAt: Date;
+  }): Promise<CliToken> {
+    const token: CliToken = {
+      id: newId(),
+      userId: input.userId,
+      teamId: input.teamId,
+      tokenHash: input.tokenHash,
+      label: input.label,
+      expiresAt: input.expiresAt,
+      lastUsedAt: null,
+      createdAt: input.createdAt,
+      revokedAt: null,
+    };
+
+    await this.db.runTransaction(async (transaction) => {
+      const [userSnapshot, teamSnapshot, membershipSnapshot] = await Promise.all([
+        transaction.get(this.db.collection("users").doc(token.userId)),
+        transaction.get(this.db.collection("teams").doc(token.teamId)),
+        transaction.get(
+          this.db.collection("teamMembers").doc(teamMemberDocumentId(token.teamId, token.userId)),
+        ),
+      ]);
+
+      assertExists(userSnapshot.exists, `users/${token.userId}`);
+      assertExists(teamSnapshot.exists, `teams/${token.teamId}`);
+      assertExists(membershipSnapshot.exists, `teamMembers/${token.teamId}/${token.userId}`);
+
+      transaction.create(this.db.collection("_unique").doc(cliTokenHashUniqueId(token.tokenHash)), {
+        tokenId: token.id,
+      });
+      transaction.create(this.db.collection("cliTokens").doc(token.id), {
+        userId: token.userId,
+        teamId: token.teamId,
+        tokenHash: token.tokenHash,
+        label: token.label,
+        expiresAt: token.expiresAt ? Timestamp.fromDate(token.expiresAt) : null,
+        lastUsedAt: null,
+        createdAt: Timestamp.fromDate(token.createdAt),
+        revokedAt: null,
+      });
+    });
+
+    return token;
+  }
 }
 
 export function createJudgeRepository(): JudgeRepository {
   return new FirestoreJudgeRepository();
+}
+
+export function createJudgeAdminRepository(): JudgeAdminRepository {
+  return new FirestoreJudgeAdminRepository();
 }
 
 function toCliToken(doc: QueryDocumentSnapshot): CliToken {
@@ -516,12 +612,39 @@ function readNullableDate(data: DocumentData, key: string): Date | null {
   throw new Error(`Firestore field ${key} must be a timestamp or null`);
 }
 
+function assertExists(exists: boolean, path: string): void {
+  if (!exists) {
+    throw new Error(`Missing required foreign key document: ${path}`);
+  }
+}
+
+function problemDocumentId(eventId: string, problemId: string): string {
+  return encodeCompositeId([eventId, problemId]);
+}
+
+function teamMemberDocumentId(teamId: string, userId: string): string {
+  return encodeCompositeId([teamId, userId]);
+}
+
 function solveDocumentId(teamId: string, eventId: string, problemId: string): string {
   return encodeCompositeId([teamId, eventId, problemId]);
 }
 
 function submissionCaseDocumentId(submissionId: string, caseId: string): string {
   return encodeCompositeId([submissionId, caseId]);
+}
+
+function testcaseOrderUniqueId(
+  eventId: string,
+  problemId: string,
+  version: string,
+  orderIndex: number,
+): string {
+  return `testcases:${encodeCompositeId([eventId, problemId, version, String(orderIndex)])}`;
+}
+
+function cliTokenHashUniqueId(tokenHash: string): string {
+  return `cliTokens:tokenHash:${tokenHash}`;
 }
 
 function encodeCompositeId(parts: string[]): string {

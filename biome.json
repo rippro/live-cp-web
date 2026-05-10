@@ -10,6 +10,9 @@
       "style": {
         "useConst": "error",
         "noNonNullAssertion": "warn"
+      },
+      "suspicious": {
+        "noUnknownAtRules": "off"
       }
     }
   },
