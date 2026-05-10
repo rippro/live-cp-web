@@ -14,7 +14,7 @@ export default async function EventLayout({ children, params }: EventLayoutProps
     <>
       <GlobalNav />
       <EventNav eventId={eventId} />
-      <main className="min-h-screen bg-rp-900 pt-[104px]">
+      <main className="min-h-screen bg-rp-900 pt-[108px]">
         {children}
       </main>
     </>

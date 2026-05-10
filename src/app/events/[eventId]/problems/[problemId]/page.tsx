@@ -60,72 +60,75 @@ export default async function ProblemPage({ params }: PageProps) {
   if (!problem) notFound();
 
   return (
-    <div className="mx-auto max-w-4xl px-6 py-10">
-      <div className="mb-8">
+    <div className="mx-auto max-w-3xl px-6 py-10">
+
+      {/* Problem header */}
+      <div className="mb-10 pb-8 border-b border-rp-border">
         <div className="flex items-center gap-3 mb-3">
-          <span className="font-mono text-sm text-rp-muted">{problem.id}</span>
+          <span className="font-mono text-sm font-bold text-rp-500 bg-rp-800 border border-rp-border px-2.5 py-1 rounded-md">
+            {problem.id}
+          </span>
           {!problem.isPublished && (
-            <span className="text-[10px] font-mono px-2 py-0.5 rounded border border-rp-muted/30 text-rp-muted">
+            <span className="text-[10px] font-mono px-2 py-0.5 rounded border border-rp-border text-rp-muted bg-rp-800">
               DRAFT
             </span>
           )}
-          <span className="font-mono text-xs text-rp-500">ver {problem.testcaseVersion}</span>
+          <span className="font-mono text-xs text-rp-muted">v{problem.testcaseVersion}</span>
         </div>
-        <h1 className="font-display text-3xl font-extrabold text-rp-100 mb-2">{problem.title}</h1>
-        <div className="flex items-center gap-4 text-xs font-mono text-rp-muted">
-          <span>制限時間: <span className="text-rp-100">{problem.timeLimitMs}ms</span></span>
-          <span>言語: <span className="text-rp-100">{problem.allowedLanguages.join(", ")}</span></span>
+        <h1 className="text-3xl font-extrabold tracking-tight text-rp-100 mb-4">{problem.title}</h1>
+        <div className="flex flex-wrap items-center gap-x-6 gap-y-1 text-xs text-rp-muted">
+          <span>制限時間: <span className="text-rp-300 font-mono">{problem.timeLimitMs}ms</span></span>
+          <span>言語: <span className="text-rp-300 font-mono">{problem.allowedLanguages.join(", ")}</span></span>
         </div>
       </div>
 
-      <div className="space-y-6">
+      <div className="space-y-8">
         {/* 問題文 */}
-        <section className="card-surface p-6">
-          <h2 className="font-display text-base font-bold text-rp-300 mb-3">問題文</h2>
-          <div className="text-sm text-rp-100 leading-7 whitespace-pre-wrap">{problem.statement}</div>
+        <section>
+          <h2 className="text-xs font-medium tracking-widest text-rp-muted uppercase mb-4">問題文</h2>
+          <div className="text-sm text-rp-100 leading-8 whitespace-pre-wrap">{problem.statement}</div>
         </section>
 
         {/* 制約 */}
         {problem.constraints && (
-          <section className="card-surface p-6">
-            <h2 className="font-display text-base font-bold text-rp-300 mb-3">制約</h2>
-            <div className="text-sm text-rp-100 leading-7 whitespace-pre-wrap font-mono">{problem.constraints}</div>
+          <section className="border-t border-rp-border pt-6">
+            <h2 className="text-xs font-medium tracking-widest text-rp-muted uppercase mb-4">制約</h2>
+            <div className="text-sm text-rp-100 leading-7 whitespace-pre-wrap font-mono bg-rp-800 rounded-lg border border-rp-border p-4">{problem.constraints}</div>
           </section>
         )}
 
-        <div className="grid gap-4 md:grid-cols-2">
-          {/* 入力形式 */}
+        {/* 入出力形式 */}
+        <div className="grid gap-4 md:grid-cols-2 border-t border-rp-border pt-6">
           {problem.inputFormat && (
-            <section className="card-surface p-5">
-              <h2 className="font-display text-sm font-bold text-rp-300 mb-2">入力</h2>
-              <pre className="text-xs text-rp-100 font-mono whitespace-pre-wrap leading-5">{problem.inputFormat}</pre>
+            <section>
+              <h2 className="text-xs font-medium tracking-widest text-rp-muted uppercase mb-3">入力</h2>
+              <pre className="text-xs text-rp-100 font-mono whitespace-pre-wrap leading-6 bg-rp-800 rounded-lg border border-rp-border p-4">{problem.inputFormat}</pre>
             </section>
           )}
-          {/* 出力形式 */}
           {problem.outputFormat && (
-            <section className="card-surface p-5">
-              <h2 className="font-display text-sm font-bold text-rp-300 mb-2">出力</h2>
-              <pre className="text-xs text-rp-100 font-mono whitespace-pre-wrap leading-5">{problem.outputFormat}</pre>
+            <section>
+              <h2 className="text-xs font-medium tracking-widest text-rp-muted uppercase mb-3">出力</h2>
+              <pre className="text-xs text-rp-100 font-mono whitespace-pre-wrap leading-6 bg-rp-800 rounded-lg border border-rp-border p-4">{problem.outputFormat}</pre>
             </section>
           )}
         </div>
 
         {/* サンプル */}
         {problem.samples.length > 0 && (
-          <section>
-            <h2 className="font-display text-base font-bold text-rp-300 mb-3">サンプル</h2>
-            <div className="space-y-3">
+          <section className="border-t border-rp-border pt-6">
+            <h2 className="text-xs font-medium tracking-widest text-rp-muted uppercase mb-6">サンプル</h2>
+            <div className="space-y-6">
               {problem.samples.map((s, i) => (
-                <div key={s.id} className="card-surface p-5">
-                  <p className="text-xs font-mono text-rp-muted mb-3">サンプル {i + 1}</p>
+                <div key={s.id}>
+                  <p className="text-xs font-mono text-rp-muted mb-3">Sample {i + 1}</p>
                   <div className="grid gap-3 md:grid-cols-2">
                     <div>
-                      <p className="text-[10px] font-mono text-rp-500 mb-1.5">入力</p>
-                      <pre className="rounded-lg bg-rp-900 border border-rp-border p-3 text-xs font-mono text-rp-300 whitespace-pre-wrap">{s.input}</pre>
+                      <p className="text-[10px] font-medium tracking-widest text-rp-muted uppercase mb-2">Input</p>
+                      <pre className="rounded-lg bg-rp-800 border border-rp-border p-4 text-xs font-mono text-rp-300 whitespace-pre-wrap min-h-[60px]">{s.input}</pre>
                     </div>
                     <div>
-                      <p className="text-[10px] font-mono text-rp-500 mb-1.5">出力</p>
-                      <pre className="rounded-lg bg-rp-900 border border-rp-border p-3 text-xs font-mono text-rp-success whitespace-pre-wrap">{s.expectedOutput}</pre>
+                      <p className="text-[10px] font-medium tracking-widest text-rp-muted uppercase mb-2">Output</p>
+                      <pre className="rounded-lg bg-rp-800 border border-rp-border p-4 text-xs font-mono text-rp-success whitespace-pre-wrap min-h-[60px]">{s.expectedOutput}</pre>
                     </div>
                   </div>
                 </div>

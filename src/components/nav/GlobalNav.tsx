@@ -27,34 +27,36 @@ function AccountMenu({ onLogout }: { onLogout: () => void }) {
     return () => document.removeEventListener("mousedown", handler);
   }, []);
 
-  const initials = session ? getSessionDisplayName(session).slice(0, 2).toUpperCase() : "?";
+  const displayName = session ? getSessionDisplayName(session) : "?";
+  const initials = displayName.slice(0, 2).toUpperCase();
 
   return (
     <div className="relative">
       <button
         type="button"
         onClick={() => setOpen((p) => !p)}
-        className="flex h-8 w-8 items-center justify-center rounded-full bg-rp-400/20 border border-rp-400/40 text-xs font-mono font-semibold text-rp-300 hover:bg-rp-400/30 transition-colors"
+        className="flex h-8 w-8 items-center justify-center rounded-full bg-rp-400 text-xs font-semibold text-white hover:bg-rp-300 transition-colors"
+        style={{ backgroundColor: "var(--rp-400)", color: "#fff" }}
       >
         {initials}
       </button>
       {open && (
         <div
           ref={menuRef}
-          className="absolute right-0 top-full mt-2 w-52 rounded-xl border border-rp-border bg-rp-800 shadow-2xl overflow-hidden z-[100] animate-scale-in"
+          className="absolute right-0 top-full mt-2 w-52 rounded-lg border border-rp-border bg-rp-900 shadow-lg overflow-hidden z-[100] animate-scale-in"
         >
           {session && (
             <div className="px-4 py-3 border-b border-rp-border">
               <p className="text-xs text-rp-muted">ログイン中</p>
               <p className="text-sm font-medium text-rp-100 truncate mt-0.5">
-                {getSessionDisplayName(session)}
+                {displayName}
               </p>
-              <span className={`inline-block mt-1 text-[10px] font-mono px-1.5 py-0.5 rounded ${
+              <span className={`inline-block mt-1.5 text-[10px] font-mono px-1.5 py-0.5 rounded ${
                 session.role === "admin"
-                  ? "bg-rp-accent/20 text-rp-accent border border-rp-accent/30"
+                  ? "bg-rp-accent/10 text-rp-accent border border-rp-accent/25"
                   : session.role === "creator"
-                  ? "bg-rp-400/20 text-rp-300 border border-rp-400/30"
-                  : "bg-rp-success/20 text-rp-success border border-rp-success/30"
+                  ? "bg-rp-400/10 text-rp-400 border border-rp-400/25"
+                  : "bg-rp-700 text-rp-success border border-rp-success/25"
               }`}>
                 {session.role.toUpperCase()}
               </span>
@@ -62,7 +64,7 @@ function AccountMenu({ onLogout }: { onLogout: () => void }) {
           )}
           <Link
             href="/account"
-            className="flex items-center gap-2 px-4 py-2.5 text-sm text-rp-muted hover:text-rp-100 hover:bg-rp-700 transition-colors"
+            className="flex items-center gap-2 px-4 py-2.5 text-sm text-rp-500 hover:text-rp-100 hover:bg-rp-800 transition-colors"
             onClick={() => setOpen(false)}
           >
             <svg width="14" height="14" viewBox="0 0 16 16" fill="none">
@@ -74,7 +76,7 @@ function AccountMenu({ onLogout }: { onLogout: () => void }) {
           <button
             type="button"
             onClick={() => { setOpen(false); onLogout(); }}
-            className="flex w-full items-center gap-2 px-4 py-2.5 text-sm text-rp-muted hover:text-rp-accent hover:bg-rp-700 transition-colors"
+            className="flex w-full items-center gap-2 px-4 py-2.5 text-sm text-rp-500 hover:text-rp-accent hover:bg-rp-800 transition-colors"
           >
             <svg width="14" height="14" viewBox="0 0 16 16" fill="none">
               <path d="M6 2H3a1 1 0 00-1 1v10a1 1 0 001 1h3M10 11l3-3-3-3M13 8H6" stroke="currentColor" strokeWidth="1.4" strokeLinecap="round" strokeLinejoin="round" />
@@ -106,14 +108,10 @@ export function GlobalNav() {
     <>
       <nav className="nav-glass fixed top-0 left-0 right-0 z-50 h-14">
         <div className="mx-auto flex h-full max-w-7xl items-center justify-between px-6">
-          <div className="flex items-center gap-6">
-            <Link href="/" className="flex items-center gap-2">
-              <div className="h-7 w-7 rounded-md bg-rp-400 flex items-center justify-center">
-                <svg width="14" height="14" viewBox="0 0 14 14" fill="none">
-                  <path d="M2 7l3.5 3.5L12 4" stroke="white" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
-                </svg>
-              </div>
-              <span className="font-display text-sm font-bold text-rp-100 tracking-wide">
+          <div className="flex items-center gap-8">
+            <Link href="/" className="flex items-center gap-0.5">
+              <span className="text-[11px] text-rp-muted tracking-widest uppercase mr-2 hidden sm:block">競プロ</span>
+              <span className="font-bold text-base tracking-tight text-rp-100">
                 RipPro
               </span>
             </Link>
@@ -127,10 +125,10 @@ export function GlobalNav() {
                   <Link
                     key={link.href}
                     href={link.href}
-                    className={`px-3 py-1.5 rounded-md text-sm font-medium transition-colors ${
+                    className={`px-3 py-1.5 rounded-md text-sm transition-colors ${
                       active
-                        ? "bg-rp-400/20 text-rp-300"
-                        : "text-rp-muted hover:text-rp-100 hover:bg-rp-700"
+                        ? "text-rp-100 font-medium"
+                        : "text-rp-muted hover:text-rp-100"
                     }`}
                   >
                     {link.label}

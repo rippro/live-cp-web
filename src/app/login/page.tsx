@@ -70,32 +70,23 @@ export default function LoginPage() {
 
   return (
     <div className="min-h-screen bg-rp-900 flex items-center justify-center px-4">
-      <div className="absolute inset-0 pointer-events-none">
-        <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[600px] h-[600px] bg-rp-400/4 rounded-full blur-[100px]" />
-      </div>
-
-      <div className="relative w-full max-w-md">
-        <Link href="/" className="flex items-center gap-2 justify-center mb-8">
-          <div className="h-8 w-8 rounded-lg bg-rp-400 flex items-center justify-center">
-            <svg width="16" height="16" viewBox="0 0 16 16" fill="none">
-              <path d="M3 8l4 4 6-7" stroke="white" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
-            </svg>
-          </div>
-          <span className="font-display text-lg font-bold text-rp-100">RipPro Judge</span>
+      <div className="w-full max-w-sm">
+        <Link href="/" className="flex items-center justify-center gap-2 mb-10">
+          <span className="text-xl font-extrabold tracking-tight text-rp-100">RipPro</span>
         </Link>
 
-        <div className="card-surface p-8">
-          <h1 className="font-display text-xl font-bold text-rp-100 mb-1 text-center">ログイン</h1>
-          <p className="text-sm text-rp-muted text-center mb-6">アカウントにアクセス</p>
+        <div className="border border-rp-border rounded-xl p-8 bg-rp-900 shadow-sm">
+          <h1 className="text-xl font-bold tracking-tight text-rp-100 mb-1">ログイン</h1>
+          <p className="text-sm text-rp-muted mb-7">アカウントにアクセス</p>
 
-          <div className="flex mb-6 rounded-xl overflow-hidden border border-rp-border">
+          <div className="flex mb-6 rounded-lg overflow-hidden border border-rp-border">
             {(["google", "solver"] as const).map((t) => (
               <button
                 key={t}
                 type="button"
                 onClick={() => setTab(t)}
                 className={`flex-1 py-2.5 text-sm font-medium transition-colors ${
-                  tab === t ? "bg-rp-400 text-rp-100" : "bg-rp-700 text-rp-muted hover:text-rp-100"
+                  tab === t ? "bg-rp-400 text-white" : "bg-rp-800 text-rp-muted hover:text-rp-100"
                 }`}
               >
                 {t === "google" ? "Creator / Admin" : "Solver"}
@@ -109,7 +100,7 @@ export default function LoginPage() {
                 type="button"
                 onClick={handleGoogle}
                 disabled={submitting}
-                className="w-full flex items-center justify-center gap-3 rounded-xl border border-rp-border bg-rp-700 px-4 py-3.5 text-sm font-medium text-rp-100 transition-all hover:bg-rp-600 hover:border-rp-500 disabled:opacity-50"
+                className="w-full flex items-center justify-center gap-3 rounded-lg border border-rp-border bg-rp-900 px-4 py-3.5 text-sm font-medium text-rp-100 transition-all hover:bg-rp-800 hover:border-rp-500 disabled:opacity-50"
               >
                 <svg width="18" height="18" viewBox="0 0 24 24">
                   <path fill="#4285F4" d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z" />
@@ -119,10 +110,8 @@ export default function LoginPage() {
                 </svg>
                 {submitting ? "処理中..." : "Google でログイン"}
               </button>
-              <p className="text-xs text-rp-muted text-center">
-                Admin は指定のメールアドレスのみ認可
-              </p>
-              {error && <p className="text-sm text-rp-accent text-center">{error}</p>}
+              <p className="text-xs text-rp-muted text-center">Admin は指定のメールアドレスのみ認可</p>
+              {error && <p className="text-sm text-rp-accent text-center mt-2">{error}</p>}
             </div>
           ) : (
             <form onSubmit={handleSolver} className="space-y-4">

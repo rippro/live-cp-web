@@ -58,50 +58,58 @@ export default async function ProblemsPage({ params }: PageProps) {
 
   return (
     <div className="mx-auto max-w-7xl px-6 py-10">
-      <div className="mb-6 flex items-center justify-between">
+      <div className="mb-8 pb-6 border-b border-rp-border flex items-end justify-between">
         <div>
-          <h1 className="font-display text-2xl font-bold text-rp-100">Problems</h1>
-          <p className="text-sm text-rp-muted mt-0.5">{problems.length} 問</p>
+          <p className="text-xs font-medium tracking-widest text-rp-muted uppercase mb-1">Problems</p>
+          <h1 className="text-2xl font-extrabold tracking-tight text-rp-100">問題一覧</h1>
         </div>
+        <span className="text-sm text-rp-muted">{problems.length} 問</span>
       </div>
 
       {problems.length === 0 ? (
-        <div className="card-surface p-16 text-center">
-          <p className="text-rp-muted">問題はまだ公開されていません</p>
+        <div className="py-20 text-center">
+          <p className="text-rp-muted text-sm">問題はまだ公開されていません</p>
         </div>
       ) : (
-        <div className="space-y-2">
+        <div className="divide-y divide-rp-border">
           {problems.map((p) => (
             <Link
               key={p.id}
               href={`/events/${eventId}/problems/${p.id}`}
-              className="card-surface flex items-center gap-4 p-4 hover:border-rp-500 transition-all group"
+              className="flex items-center gap-5 py-5 group hover:bg-rp-800 -mx-4 px-4 transition-colors rounded-lg"
             >
-              <div className="flex-shrink-0 w-12 h-12 rounded-lg bg-rp-700 flex items-center justify-center">
-                <span className="font-mono text-sm font-bold text-rp-300">{p.id}</span>
+              <div className="flex-shrink-0 w-10 h-10 rounded-lg bg-rp-800 border border-rp-border flex items-center justify-center group-hover:border-rp-500 transition-colors">
+                <span className="font-mono text-xs font-bold text-rp-500">{p.id}</span>
               </div>
               <div className="flex-1 min-w-0">
-                <div className="flex items-center gap-2 mb-0.5">
-                  <h2 className="font-display text-base font-semibold text-rp-100 group-hover:text-rp-300 transition-colors truncate">
+                <div className="flex items-center gap-2 mb-1">
+                  <h2 className="text-sm font-semibold text-rp-100 group-hover:text-rp-400 transition-colors truncate">
                     {p.title}
                   </h2>
                   {!p.isPublished && (
-                    <span className="flex-shrink-0 text-[10px] font-mono px-1.5 py-0.5 rounded border border-rp-muted/30 text-rp-muted">
+                    <span className="flex-shrink-0 text-[10px] font-mono px-1.5 py-0.5 rounded border border-rp-border text-rp-muted bg-rp-800">
                       DRAFT
                     </span>
                   )}
                 </div>
                 <div className="flex items-center gap-3 text-xs text-rp-muted font-mono">
                   <span>{p.timeLimitMs}ms</span>
+                  <span className="text-rp-600">·</span>
                   <span>{p.allowedLanguages.join(" / ")}</span>
-                  <span className="text-rp-500">ver {p.testcaseVersion}</span>
+                  <span className="text-rp-600">·</span>
+                  <span>v{p.testcaseVersion}</span>
                 </div>
               </div>
-              <div className="flex-shrink-0 text-right">
-                <div className="font-mono text-lg font-bold text-rp-success">
-                  {solves.get(p.id) ?? 0}
+              <div className="flex-shrink-0 flex items-center gap-4">
+                <div className="text-right">
+                  <div className="text-lg font-bold text-rp-success font-mono">
+                    {solves.get(p.id) ?? 0}
+                  </div>
+                  <div className="text-[10px] text-rp-muted uppercase tracking-wide">AC</div>
                 </div>
-                <div className="text-[10px] text-rp-muted">AC</div>
+                <svg width="15" height="15" viewBox="0 0 15 15" fill="none" className="text-rp-600 group-hover:text-rp-400 transition-colors">
+                  <path d="M3.5 7.5h8M8 4l3.5 3.5L8 11" stroke="currentColor" strokeWidth="1.4" strokeLinecap="round" strokeLinejoin="round" />
+                </svg>
               </div>
             </Link>
           ))}

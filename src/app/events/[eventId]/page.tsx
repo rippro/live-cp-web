@@ -51,84 +51,85 @@ export default async function EventHomePage({ params }: PageProps) {
 
   const now = new Date();
   const ended = now > event.endsAt;
-  const statusLabel = event.isActive && !ended ? "LIVE" : ended ? "ENDED" : "UPCOMING";
-  const statusClass = event.isActive && !ended ? "badge-active" : "badge-inactive";
+  const isLive = event.isActive && !ended;
+  const statusLabel = isLive ? "LIVE" : ended ? "ENDED" : "UPCOMING";
 
   const stats = [
-    { label: "Problems", value: event.publishedCount, total: event.problemCount, icon: "📋" },
-    { label: "Teams", value: event.teamCount, icon: "👥" },
-    { label: "Submissions", value: event.submissionCount, icon: "📤" },
-    { label: "Solves", value: event.solveCount, icon: "✅" },
+    { label: "公開問題", value: event.publishedCount, total: event.problemCount },
+    { label: "チーム", value: event.teamCount },
+    { label: "提出数", value: event.submissionCount },
+    { label: "AC 数", value: event.solveCount },
   ];
 
   return (
     <div className="mx-auto max-w-7xl px-6 py-12">
+
       {/* Header */}
-      <div className="mb-10 flex items-start justify-between flex-wrap gap-4">
-        <div>
-          <div className="mb-2 flex items-center gap-3">
-            <span className={`text-[10px] font-mono px-2 py-0.5 rounded-full border ${statusClass}`}>
-              {statusLabel}
-            </span>
+      <div className="mb-12 pb-8 border-b border-rp-border">
+        <div className="flex items-start justify-between flex-wrap gap-6">
+          <div>
+            <div className="flex items-center gap-3 mb-3">
+              <span className={`text-[11px] font-medium px-2.5 py-1 rounded-full ${
+                isLive ? "badge-active" : "badge-inactive"
+              }`}>
+                {statusLabel}
+              </span>
+            </div>
+            <h1 className="text-4xl font-extrabold tracking-tight text-rp-100 mb-3">{event.id}</h1>
+            <div className="flex items-center gap-6 text-xs font-mono text-rp-muted">
+              <span>
+                <span className="text-rp-500 mr-1.5">開始</span>
+                {event.startsAt.toLocaleDateString("ja-JP")} {event.startsAt.toLocaleTimeString("ja-JP", { hour: "2-digit", minute: "2-digit" })}
+              </span>
+              <span>
+                <span className="text-rp-500 mr-1.5">終了</span>
+                {event.endsAt.toLocaleDateString("ja-JP")} {event.endsAt.toLocaleTimeString("ja-JP", { hour: "2-digit", minute: "2-digit" })}
+              </span>
+            </div>
           </div>
-          <h1 className="font-display text-4xl font-extrabold text-rp-100">{event.id}</h1>
-          <div className="mt-2 flex items-center gap-4 text-xs font-mono text-rp-muted">
-            <span>
-              <span className="text-rp-500 mr-1">START</span>
-              {event.startsAt.toLocaleDateString("ja-JP")} {event.startsAt.toLocaleTimeString("ja-JP", { hour: "2-digit", minute: "2-digit" })}
-            </span>
-            <span>
-              <span className="text-rp-500 mr-1">END</span>
-              {event.endsAt.toLocaleDateString("ja-JP")} {event.endsAt.toLocaleTimeString("ja-JP", { hour: "2-digit", minute: "2-digit" })}
-            </span>
-          </div>
+          <Link href={`/events/${eventId}/problems`} className="btn-primary inline-flex items-center gap-2">
+            問題を見る
+            <svg width="14" height="14" viewBox="0 0 14 14" fill="none">
+              <path d="M3 7h8M7 3l4 4-4 4" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" />
+            </svg>
+          </Link>
         </div>
-        <Link
-          href={`/events/${eventId}/problems`}
-          className="btn-primary inline-flex items-center gap-2"
-        >
-          問題を見る
-          <svg width="14" height="14" viewBox="0 0 14 14" fill="none">
-            <path d="M3 7h8M7 3l4 4-4 4" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" />
-          </svg>
-        </Link>
       </div>
 
       {/* Stats */}
-      <div className="grid grid-cols-2 gap-3 sm:grid-cols-4 mb-10">
+      <div className="grid grid-cols-2 sm:grid-cols-4 divide-x divide-y sm:divide-y-0 divide-rp-border border border-rp-border rounded-lg mb-10 overflow-hidden">
         {stats.map((s) => (
-          <div key={s.label} className="card-surface p-5">
-            <div className="text-2xl mb-2">{s.icon}</div>
-            <div className="font-mono text-2xl font-bold text-rp-100">
+          <div key={s.label} className="px-6 py-5 bg-rp-800">
+            <div className="text-3xl font-extrabold tracking-tight text-rp-100 mb-1">
               {s.value}
               {s.total !== undefined && s.total !== s.value && (
-                <span className="text-sm text-rp-muted font-normal"> / {s.total}</span>
+                <span className="text-base text-rp-muted font-normal"> / {s.total}</span>
               )}
             </div>
-            <div className="text-xs text-rp-muted mt-0.5">{s.label}</div>
+            <div className="text-xs text-rp-muted">{s.label}</div>
           </div>
         ))}
       </div>
 
       {/* Quick links */}
-      <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
+      <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
         {[
-          { href: `/events/${eventId}/problems`, label: "Problems", desc: "問題一覧と詳細", color: "rp-400" },
-          { href: `/events/${eventId}/submissions`, label: "Submissions", desc: "提出履歴と AC 一覧", color: "rp-success" },
-          { href: `/events/${eventId}/teams`, label: "Teams", desc: "チームランキング", color: "rp-warning" },
-          { href: `/events/${eventId}/setup`, label: "Setup", desc: "CLI セットアップガイド", color: "rp-300" },
+          { href: `/events/${eventId}/problems`, label: "Problems", desc: "問題一覧と詳細" },
+          { href: `/events/${eventId}/submissions`, label: "Submissions", desc: "提出履歴と AC 一覧" },
+          { href: `/events/${eventId}/teams`, label: "Teams", desc: "チームランキング" },
+          { href: `/events/${eventId}/setup`, label: "Setup", desc: "CLI セットアップガイド" },
         ].map((link) => (
           <Link
             key={link.href}
             href={link.href}
-            className="card-surface p-5 flex items-center justify-between group hover:border-rp-500 transition-all"
+            className="card-surface p-5 flex items-center justify-between group hover:border-rp-500 hover:bg-rp-800 transition-all"
           >
             <div>
-              <p className={`text-sm font-display font-bold text-${link.color} mb-0.5`}>{link.label}</p>
+              <p className="text-sm font-semibold text-rp-100 mb-0.5 group-hover:text-rp-400 transition-colors">{link.label}</p>
               <p className="text-xs text-rp-muted">{link.desc}</p>
             </div>
-            <svg width="16" height="16" viewBox="0 0 16 16" fill="none" className="text-rp-500 group-hover:text-rp-300 transition-colors">
-              <path d="M4 8h8M8 4l4 4-4 4" stroke="currentColor" strokeWidth="1.4" strokeLinecap="round" strokeLinejoin="round" />
+            <svg width="15" height="15" viewBox="0 0 15 15" fill="none" className="text-rp-600 group-hover:text-rp-400 transition-colors flex-shrink-0">
+              <path d="M3.5 7.5h8M8 4l3.5 3.5L8 11" stroke="currentColor" strokeWidth="1.4" strokeLinecap="round" strokeLinejoin="round" />
             </svg>
           </Link>
         ))}

@@ -87,20 +87,20 @@ export function LoginModal({ open, onClose }: LoginModalProps) {
       className="fixed inset-0 z-[200] flex items-center justify-center"
       onClick={(e) => { if (e.target === overlayRef.current) onClose(); }}
     >
-      <div className="absolute inset-0 bg-rp-900/80 backdrop-blur-sm" />
-      <div className="relative w-full max-w-sm mx-4 rounded-2xl border border-rp-border bg-rp-800 p-8 shadow-2xl animate-scale-in">
+      <div className="absolute inset-0 bg-rp-100/40 backdrop-blur-sm" />
+      <div className="relative w-full max-w-sm mx-4 rounded-xl border border-rp-border bg-rp-900 p-8 shadow-xl animate-scale-in">
         <button
           onClick={onClose}
           className="absolute top-4 right-4 text-rp-muted hover:text-rp-100 transition-colors"
           type="button"
         >
-          <svg width="20" height="20" viewBox="0 0 20 20" fill="none">
-            <path d="M4 4l12 12M16 4L4 16" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" />
+          <svg width="18" height="18" viewBox="0 0 18 18" fill="none">
+            <path d="M3 3l12 12M15 3L3 15" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" />
           </svg>
         </button>
 
-        <h2 className="font-display text-xl font-bold text-rp-100 mb-1">ログイン</h2>
-        <p className="text-sm text-rp-muted mb-6">RipPro Judge にアクセス</p>
+        <h2 className="text-xl font-bold tracking-tight text-rp-100 mb-1">ログイン</h2>
+        <p className="text-sm text-rp-muted mb-7">RipPro Judge にアクセス</p>
 
         <div className="flex mb-6 rounded-lg overflow-hidden border border-rp-border">
           <button
@@ -108,8 +108,8 @@ export function LoginModal({ open, onClose }: LoginModalProps) {
             onClick={() => setTab("google")}
             className={`flex-1 py-2 text-sm font-medium transition-colors ${
               tab === "google"
-                ? "bg-rp-400 text-rp-100"
-                : "bg-rp-700 text-rp-muted hover:text-rp-100"
+                ? "bg-rp-400 text-white"
+                : "bg-rp-800 text-rp-muted hover:text-rp-100"
             }`}
           >
             Creator / Admin
@@ -119,8 +119,8 @@ export function LoginModal({ open, onClose }: LoginModalProps) {
             onClick={() => setTab("solver")}
             className={`flex-1 py-2 text-sm font-medium transition-colors ${
               tab === "solver"
-                ? "bg-rp-400 text-rp-100"
-                : "bg-rp-700 text-rp-muted hover:text-rp-100"
+                ? "bg-rp-400 text-white"
+                : "bg-rp-800 text-rp-muted hover:text-rp-100"
             }`}
           >
             Solver
@@ -133,7 +133,7 @@ export function LoginModal({ open, onClose }: LoginModalProps) {
               type="button"
               onClick={handleGoogle}
               disabled={loading}
-              className="w-full flex items-center justify-center gap-3 rounded-lg border border-rp-border bg-rp-700 px-4 py-3 text-sm font-medium text-rp-100 transition-all hover:bg-rp-600 hover:border-rp-500 disabled:opacity-50"
+              className="w-full flex items-center justify-center gap-3 rounded-lg border border-rp-border bg-rp-900 px-4 py-3 text-sm font-medium text-rp-100 transition-all hover:bg-rp-800 hover:border-rp-500 disabled:opacity-50"
             >
               <svg width="18" height="18" viewBox="0 0 24 24">
                 <path fill="#4285F4" d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z" />
@@ -143,9 +143,8 @@ export function LoginModal({ open, onClose }: LoginModalProps) {
               </svg>
               {loading ? "ログイン中..." : "Google でログイン"}
             </button>
-            <p className="text-xs text-rp-muted text-center">
-              Admin は登録メールアドレスのみ
-            </p>
+            <p className="text-xs text-rp-muted text-center">Admin は登録メールアドレスのみ</p>
+            {error && <p className="text-sm text-rp-accent text-center mt-2">{error}</p>}
           </div>
         ) : (
           <form onSubmit={handleSolver} className="space-y-4">
@@ -184,15 +183,11 @@ export function LoginModal({ open, onClose }: LoginModalProps) {
             <button
               type="submit"
               disabled={loading}
-              className="btn-primary w-full"
+              className="btn-primary w-full mt-2"
             >
               {loading ? "ログイン中..." : "ログイン"}
             </button>
           </form>
-        )}
-
-        {tab === "google" && error && (
-          <p className="mt-3 text-sm text-rp-accent text-center">{error}</p>
         )}
       </div>
     </div>
