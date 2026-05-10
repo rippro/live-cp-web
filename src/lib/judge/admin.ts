@@ -119,6 +119,7 @@ export async function createAdminProblem(
     statement: readString(input, "statement"),
     solutionCode: readOptionalString(input, "solutionCode") ?? "",
     timeLimitMs: readPositiveInteger(input, "timeLimitMs"),
+    points: input.points !== undefined ? readPositiveInteger(input, "points") : 100,
     compareMode: compareMode as CompareMode,
     isPublished: readOptionalBoolean(input, "isPublished") ?? false,
     createdAt: now,

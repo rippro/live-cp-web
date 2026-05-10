@@ -8,6 +8,7 @@ interface Team {
   id: string;
   name: string;
   solveCount: number;
+  totalPoints: number;
   createdAt: string;
 }
 
@@ -31,7 +32,7 @@ function CreateTeamForm({ eventId, onCreated }: { eventId: string; onCreated: (t
       const d = (await res.json()) as Team & { inviteCode?: string; error?: string };
       if (!res.ok) { setError(d.error ?? "作成失敗"); return; }
       setInviteCode(d.inviteCode ?? null);
-      onCreated({ id: d.id, name: d.name, solveCount: 0, createdAt: d.createdAt });
+      onCreated({ id: d.id, name: d.name, solveCount: 0, totalPoints: 0, createdAt: d.createdAt });
       setName("");
     } finally {
       setSaving(false);
@@ -153,8 +154,11 @@ export default function TeamsPage() {
                 <p className="font-mono text-xs text-rp-muted">{team.id.slice(0, 8)}...</p>
               </div>
               <div className="text-right">
-                <div className="font-mono text-xl font-bold text-rp-success">{team.solveCount}</div>
-                <div className="text-[10px] text-rp-muted">SOLVES</div>
+                <div className="font-mono text-xl font-bold text-rp-highlight tabular-nums">
+                  {team.totalPoints}
+                  <span className="text-sm font-normal text-rp-muted ml-1">pt</span>
+                </div>
+                <div className="text-[10px] text-rp-muted">{team.solveCount} SOLVES</div>
               </div>
             </div>
           ))}

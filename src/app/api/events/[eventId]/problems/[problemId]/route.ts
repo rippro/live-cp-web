@@ -44,6 +44,7 @@ export async function GET(
       statement: d.statement,
       solutionCode: d.solutionCode ?? "",
       timeLimitMs: d.timeLimitMs,
+      points: d.points ?? 100,
       compareMode: d.compareMode,
       isPublished: d.isPublished,
       creatorUid: d.creatorUid ?? null,
@@ -105,6 +106,7 @@ export async function PATCH(
     if (body[f] !== undefined) updates[f] = body[f];
   }
   if (body.timeLimitMs !== undefined) updates.timeLimitMs = Number(body.timeLimitMs);
+  if (body.points !== undefined) updates.points = Number(body.points);
   if (body.isPublished !== undefined) updates.isPublished = Boolean(body.isPublished);
 
   const batch = db.batch();

@@ -460,6 +460,7 @@ function toProblem(doc: QueryDocumentSnapshot): Problem {
     statement: readString(data, "statement"),
     solutionCode: readNullableString(data, "solutionCode") ?? "",
     timeLimitMs: readNumber(data, "timeLimitMs"),
+    points: typeof data.points === "number" ? data.points : 100,
     compareMode: compareMode as CompareMode,
     isPublished: readBoolean(data, "isPublished"),
     createdAt: readDate(data, "createdAt"),

@@ -49,6 +49,7 @@ export interface Problem {
   statement: string;
   solutionCode: string;
   timeLimitMs: number;
+  points: number;
   compareMode: CompareMode;
   isPublished: boolean;
   createdAt: Date;

@@ -20,6 +20,7 @@ async function getProblems(eventId: string) {
       title: d.title as string,
       isPublished: d.isPublished as boolean,
       timeLimitMs: d.timeLimitMs as number,
+      points: (d.points as number | undefined) ?? 100,
       updatedAt: (d.updatedAt as Timestamp).toDate().toISOString(),
     };
   });
@@ -72,10 +73,11 @@ export default async function ProblemsPage({ params }: PageProps) {
       ) : (
         <>
           {/* Table header */}
-          <div className="hidden sm:grid grid-cols-[48px_1fr_100px_80px] gap-4 px-4 pb-2 text-[11px] font-medium text-rp-muted uppercase tracking-wider">
+          <div className="hidden sm:grid grid-cols-[48px_1fr_80px_80px_80px] gap-4 px-4 pb-2 text-[11px] font-medium text-rp-muted uppercase tracking-wider">
             <span>#</span>
             <span>問題名</span>
             <span>条件</span>
+            <span className="text-right">Pt</span>
             <span className="text-right">AC</span>
           </div>
           <div className="divide-y divide-rp-border border-t border-rp-border">
@@ -101,8 +103,15 @@ export default async function ProblemsPage({ params }: PageProps) {
                   )}
                 </div>
                 {/* Time limit */}
-                <div className="hidden sm:block w-24 text-xs font-mono text-rp-muted flex-shrink-0">
+                <div className="hidden sm:block w-20 text-xs font-mono text-rp-muted flex-shrink-0">
                   {p.timeLimitMs}ms
+                </div>
+                {/* Points */}
+                <div className="hidden sm:block w-16 text-right flex-shrink-0">
+                  <span className="text-sm font-bold font-mono tabular-nums text-rp-highlight">
+                    {p.points}
+                  </span>
+                  <span className="text-[10px] text-rp-muted ml-0.5">pt</span>
                 </div>
                 {/* AC count + arrow */}
                 <div className="flex items-center gap-3 flex-shrink-0">

@@ -13,6 +13,7 @@ interface Problem {
   statement: string;
   solutionCode: string;
   timeLimitMs: number;
+  points: number;
   testcases: Testcase[];
   isPublished: boolean;
   creatorUid: string | null;
@@ -53,6 +54,7 @@ function ProblemForm({
     statement: initial?.statement ?? "",
     solutionCode: initial?.solutionCode ?? "",
     timeLimitMs: initial?.timeLimitMs ?? 2000,
+    points: initial?.points ?? 100,
     isPublished: initial?.isPublished ?? false,
   });
   const [testcases, setTestcases] = useState<Testcase[]>(
@@ -245,6 +247,20 @@ function ProblemForm({
             value={form.timeLimitMs}
             onChange={(e) => setForm((f) => ({ ...f, timeLimitMs: Number(e.target.value) }))}
             min={100}
+          />
+        </div>
+        <div>
+          <label htmlFor="points" className="block text-xs text-rp-muted mb-1.5">
+            ポイント
+          </label>
+          <input
+            id="points"
+            type="number"
+            className="input-field"
+            value={form.points}
+            onChange={(e) => setForm((f) => ({ ...f, points: Number(e.target.value) }))}
+            min={1}
+            step={1}
           />
         </div>
       </div>

@@ -29,6 +29,7 @@ export async function GET(_request: Request, { params }: { params: Promise<{ eve
         statement: d.statement,
         solutionCode: d.solutionCode ?? "",
         timeLimitMs: d.timeLimitMs,
+        points: d.points ?? 100,
         compareMode: d.compareMode,
         isPublished: d.isPublished,
         creatorUid: d.creatorUid ?? null,
@@ -88,6 +89,7 @@ export async function POST(request: Request, { params }: { params: Promise<{ eve
     statement: String(body.statement ?? ""),
     solutionCode: String(body.solutionCode ?? ""),
     timeLimitMs: Number(body.timeLimitMs ?? 2000),
+    points: Number(body.points ?? 100),
     compareMode: "trimmed-exact",
     isPublished: Boolean(body.isPublished ?? false),
     creatorUid:
