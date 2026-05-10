@@ -23,7 +23,6 @@ interface Problem {
 interface Testcase {
   id?: string;
   clientId: string;
-  type: "sample" | "hidden";
   input: string;
   expectedOutput: string;
   orderIndex?: number;
@@ -59,11 +58,8 @@ function ProblemForm({
   });
   const [testcases, setTestcases] = useState<Testcase[]>(
     initial?.testcases?.length
-      ? initial.testcases.map((testcase) => ({
-          ...testcase,
-          clientId: testcase.id ?? makeClientId(),
-        }))
-      : [{ clientId: makeClientId(), type: "sample", input: "", expectedOutput: "" }],
+      ? initial.testcases.map((tc) => ({ ...tc, clientId: tc.id ?? makeClientId() }))
+      : [{ clientId: makeClientId(), input: "", expectedOutput: "" }],
   );
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState("");
@@ -78,14 +74,10 @@ function ProblemForm({
         ? `/api/events/${eventId}/problems/${initial?.id}`
         : `/api/events/${eventId}/problems`;
       const method = isEdit ? "PATCH" : "POST";
-      const body = {
-        ...form,
-        testcases,
-      };
       const res = await fetch(url, {
         method,
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(body),
+        body: JSON.stringify({ ...form, testcases }),
       });
       if (!res.ok) {
         const d = (await res.json()) as { error?: string };
@@ -102,15 +94,12 @@ function ProblemForm({
 
   function updateTestcase(index: number, updates: Partial<Testcase>) {
     setTestcases((cases) =>
-      cases.map((testcase, i) => (i === index ? { ...testcase, ...updates } : testcase)),
+      cases.map((tc, i) => (i === index ? { ...tc, ...updates } : tc)),
     );
   }
 
-  function addTestcase(type: "sample" | "hidden") {
-    setTestcases((cases) => [
-      ...cases,
-      { clientId: makeClientId(), type, input: "", expectedOutput: "" },
-    ]);
+  function addTestcase() {
+    setTestcases((cases) => [...cases, { clientId: makeClientId(), input: "", expectedOutput: "" }]);
   }
 
   function removeTestcase(index: number) {
@@ -135,13 +124,14 @@ function ProblemForm({
       <div>
         <label htmlFor="problem-statement" className="block text-xs text-rp-muted mb-1.5">
           問題文 Markdown
+          <span className="ml-2 text-rp-500">（サンプル入出力は問題文内に記述）</span>
         </label>
         <textarea
           id="problem-statement"
           className="input-field min-h-[220px] resize-y font-mono"
           value={form.statement}
           onChange={(e) => setForm((f) => ({ ...f, statement: e.target.value }))}
-          placeholder={"# 問題文\n\n$1 \\le N \\le 10^5$"}
+          placeholder={"# 問題文\n\n$1 \\le N \\le 10^5$\n\n## サンプル入力 1\n```\n1 2\n```\n\n## サンプル出力 1\n```\n3\n```"}
           required
         />
       </div>
@@ -154,54 +144,35 @@ function ProblemForm({
           className="input-field min-h-[180px] resize-y font-mono"
           value={form.solutionCode}
           onChange={(e) => setForm((f) => ({ ...f, solutionCode: e.target.value }))}
-          placeholder={
-            "#include <bits/stdc++.h>\nusing namespace std;\nint main() {\n  return 0;\n}"
-          }
+          placeholder={"#include <bits/stdc++.h>\nusing namespace std;\nint main() {\n  return 0;\n}"}
         />
       </div>
       <div>
         <div className="mb-3 flex items-center justify-between">
-          <p className="block text-xs text-rp-muted">テストケース</p>
-          <div className="flex gap-2">
-            <button
-              type="button"
-              onClick={() => addTestcase("sample")}
-              className="btn-ghost py-1.5 px-3 text-xs"
-            >
-              サンプル追加
-            </button>
-            <button
-              type="button"
-              onClick={() => addTestcase("hidden")}
-              className="btn-ghost py-1.5 px-3 text-xs"
-            >
-              隠し追加
-            </button>
+          <div>
+            <p className="block text-xs text-rp-muted">隠しテストケース</p>
+            <p className="text-[10px] text-rp-500 mt-0.5">CLIジャッジ用。参加者には見えない。</p>
           </div>
+          <button
+            type="button"
+            onClick={addTestcase}
+            className="btn-ghost py-1.5 px-3 text-xs"
+          >
+            + 追加
+          </button>
         </div>
         <div className="space-y-4">
-          {testcases.map((testcase, index) => (
+          {testcases.map((tc, index) => (
             <div
-              key={testcase.clientId}
+              key={tc.clientId}
               className="rounded-lg border border-rp-border bg-rp-800 p-4"
             >
-              <div className="mb-3 flex items-center justify-between gap-3">
-                <select
-                  value={testcase.type}
-                  onChange={(e) =>
-                    updateTestcase(index, {
-                      type: e.target.value === "hidden" ? "hidden" : "sample",
-                    })
-                  }
-                  className="input-field w-36 bg-rp-900"
-                >
-                  <option value="sample">sample</option>
-                  <option value="hidden">hidden</option>
-                </select>
+              <div className="mb-3 flex items-center justify-between">
+                <span className="text-[10px] font-mono text-rp-muted">HIDDEN #{index + 1}</span>
                 <button
                   type="button"
                   onClick={() => removeTestcase(index)}
-                  className="btn-ghost py-1.5 px-3 text-xs"
+                  className="btn-ghost py-1 px-2 text-xs"
                   disabled={testcases.length === 1}
                 >
                   削除
@@ -215,7 +186,7 @@ function ProblemForm({
                   <textarea
                     aria-label={`Testcase ${index + 1} input`}
                     className="input-field min-h-[120px] resize-y font-mono"
-                    value={testcase.input}
+                    value={tc.input}
                     onChange={(e) => updateTestcase(index, { input: e.target.value })}
                   />
                 </div>
@@ -226,7 +197,7 @@ function ProblemForm({
                   <textarea
                     aria-label={`Testcase ${index + 1} expected output`}
                     className="input-field min-h-[120px] resize-y font-mono"
-                    value={testcase.expectedOutput}
+                    value={tc.expectedOutput}
                     onChange={(e) => updateTestcase(index, { expectedOutput: e.target.value })}
                   />
                 </div>
@@ -289,13 +260,110 @@ function ProblemForm({
   );
 }
 
+function BulkImportPanel({
+  eventId,
+  onDone,
+}: {
+  eventId: string;
+  onDone: () => void;
+}) {
+  const [json, setJson] = useState("");
+  const [importing, setImporting] = useState(false);
+  const [result, setResult] = useState<{ created: string[]; errors: { index: number; error: string }[] } | null>(null);
+  const [parseError, setParseError] = useState("");
+
+  async function doImport() {
+    setParseError("");
+    setResult(null);
+    let parsed: unknown;
+    try {
+      parsed = JSON.parse(json);
+    } catch {
+      setParseError("JSON パースエラー。配列形式で貼り付けてください。");
+      return;
+    }
+    if (!Array.isArray(parsed)) {
+      setParseError("トップレベルは配列 [ ] にしてください。");
+      return;
+    }
+    setImporting(true);
+    try {
+      const res = await fetch(`/api/events/${eventId}/problems/bulk`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(parsed),
+      });
+      const data = (await res.json()) as { created: string[]; errors: { index: number; error: string }[] };
+      setResult(data);
+      if (data.created.length > 0) onDone();
+    } catch {
+      setParseError("インポートに失敗しました");
+    } finally {
+      setImporting(false);
+    }
+  }
+
+  return (
+    <div className="space-y-3">
+      <div>
+        <p className="text-xs text-rp-muted mb-1.5">
+          AI生成JSONを貼り付け
+        </p>
+        <pre className="text-[10px] text-rp-500 bg-rp-900 border border-rp-border rounded p-3 mb-2 overflow-x-auto">{`[
+  {
+    "title": "A + B 問題",
+    "statement": "## 問題\\n整数 A, B を受け取り、A+B を出力せよ。\\n## サンプル入力 1\\n\`\`\`\\n1 2\\n\`\`\`\\n## サンプル出力 1\\n\`\`\`\\n3\\n\`\`\`",
+    "solutionCode": "#include<bits/stdc++.h>\\nusing namespace std;\\nint main(){int a,b;cin>>a>>b;cout<<a+b;}",
+    "timeLimitMs": 2000,
+    "points": 100,
+    "testcases": [
+      { "input": "1 2\\n", "expectedOutput": "3\\n" }
+    ]
+  }
+]`}</pre>
+        <textarea
+          className="input-field min-h-[200px] resize-y font-mono text-xs"
+          placeholder="[ { ... }, { ... } ]"
+          value={json}
+          onChange={(e) => setJson(e.target.value)}
+        />
+      </div>
+      {parseError && <p className="text-xs text-rp-accent">{parseError}</p>}
+      {result && (
+        <div className="text-xs space-y-1">
+          {result.created.length > 0 && (
+            <p className="text-rp-success">作成完了: {result.created.join(", ")}</p>
+          )}
+          {result.errors.map((e) => (
+            <p key={e.index} className="text-rp-accent">
+              #{e.index + 1}: {e.error}
+            </p>
+          ))}
+        </div>
+      )}
+      <div className="flex gap-3">
+        <button
+          type="button"
+          onClick={doImport}
+          disabled={importing || !json.trim()}
+          className="btn-primary"
+        >
+          {importing ? "インポート中..." : "一括インポート"}
+        </button>
+      </div>
+    </div>
+  );
+}
+
+type ActivePanel = "none" | "new" | "bulk";
+
 export default function CreatorPage() {
   const { session, loading } = useAuth();
   const router = useRouter();
   const [events, setEvents] = useState<Event[]>([]);
   const [selectedEvent, setSelectedEvent] = useState<string>("");
   const [problems, setProblems] = useState<Problem[]>([]);
-  const [showForm, setShowForm] = useState(false);
+  const [activePanel, setActivePanel] = useState<ActivePanel>("none");
   const [editProblem, setEditProblem] = useState<Problem | null>(null);
   const [deleteConfirm, setDeleteConfirm] = useState<string | null>(null);
 
@@ -320,18 +388,20 @@ export default function CreatorPage() {
       .catch(() => {});
   }, []);
 
+  function reloadProblems() {
+    if (!selectedEvent) return;
+    fetch(`/api/events/${selectedEvent}/problems`)
+      .then((r) => r.json() as Promise<{ problems: Problem[] }>)
+      .then((d) => setProblems(d.problems ?? []))
+      .catch(() => {});
+  }
+
   useEffect(() => {
     if (!selectedEvent) return;
     fetch(`/api/events/${selectedEvent}/problems`)
       .then(async (r) => {
-        const d = (await r.json()) as {
-          problems?: Problem[];
-          error?: string;
-          detail?: string;
-        };
-        if (!r.ok) {
-          throw new Error(d.detail ?? d.error ?? "問題の取得に失敗しました");
-        }
+        const d = (await r.json()) as { problems?: Problem[]; error?: string; detail?: string };
+        if (!r.ok) throw new Error(d.detail ?? d.error ?? "問題の取得に失敗しました");
         return d;
       })
       .then((d) => setProblems(d.problems ?? []))
@@ -352,7 +422,7 @@ export default function CreatorPage() {
     if (!res.ok) return;
     const problem = (await res.json()) as Problem;
     setEditProblem(problem);
-    setShowForm(false);
+    setActivePanel("none");
   }
 
   const myProblems =
@@ -361,6 +431,8 @@ export default function CreatorPage() {
       : problems.filter((p) => p.creatorUid === (session as { uid: string } | undefined)?.uid);
 
   if (loading) return null;
+
+  const showingPanel = activePanel !== "none" || editProblem !== null;
 
   return (
     <>
@@ -391,25 +463,38 @@ export default function CreatorPage() {
             </select>
           </div>
 
-          {/* Form */}
-          {showForm && selectedEvent && (
+          {/* New problem form */}
+          {activePanel === "new" && selectedEvent && (
             <div className="card-surface p-6 mb-6">
               <h2 className="font-display text-lg font-bold text-rp-100 mb-4">新規問題作成</h2>
               <ProblemForm
                 key="new"
                 eventId={selectedEvent}
-                onSave={() => {
-                  setShowForm(false);
-                  fetch(`/api/events/${selectedEvent}/problems`)
-                    .then((r) => r.json() as Promise<{ problems: Problem[] }>)
-                    .then((d) => setProblems(d.problems ?? []))
-                    .catch((error: unknown) => console.error("Failed to reload problems", error));
-                }}
-                onCancel={() => setShowForm(false)}
+                onSave={() => { setActivePanel("none"); reloadProblems(); }}
+                onCancel={() => setActivePanel("none")}
               />
             </div>
           )}
 
+          {/* Bulk import panel */}
+          {activePanel === "bulk" && selectedEvent && (
+            <div className="card-surface p-6 mb-6">
+              <h2 className="font-display text-lg font-bold text-rp-100 mb-4">一括インポート</h2>
+              <BulkImportPanel
+                eventId={selectedEvent}
+                onDone={() => { reloadProblems(); }}
+              />
+              <button
+                type="button"
+                onClick={() => setActivePanel("none")}
+                className="btn-ghost mt-4"
+              >
+                閉じる
+              </button>
+            </div>
+          )}
+
+          {/* Edit form */}
           {editProblem && (
             <div className="card-surface p-6 mb-6">
               <h2 className="font-display text-lg font-bold text-rp-100 mb-4">
@@ -419,13 +504,7 @@ export default function CreatorPage() {
                 key={editProblem.id}
                 eventId={selectedEvent}
                 initial={editProblem}
-                onSave={() => {
-                  setEditProblem(null);
-                  fetch(`/api/events/${selectedEvent}/problems`)
-                    .then((r) => r.json() as Promise<{ problems: Problem[] }>)
-                    .then((d) => setProblems(d.problems ?? []))
-                    .catch((error: unknown) => console.error("Failed to reload problems", error));
-                }}
+                onSave={() => { setEditProblem(null); reloadProblems(); }}
                 onCancel={() => setEditProblem(null)}
               />
             </div>
@@ -435,19 +514,37 @@ export default function CreatorPage() {
             <h2 className="font-display text-lg font-bold text-rp-100">
               {session?.role === "admin" ? "全問題" : "自分の問題"} ({myProblems.length})
             </h2>
-            {!showForm && !editProblem && (
-              <button type="button" onClick={() => setShowForm(true)} className="btn-primary">
-                + 新規問題
-              </button>
+            {!showingPanel && (
+              <div className="flex gap-2">
+                <button
+                  type="button"
+                  onClick={() => setActivePanel("bulk")}
+                  className="btn-ghost"
+                >
+                  一括インポート
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setActivePanel("new")}
+                  className="btn-primary"
+                >
+                  + 新規問題
+                </button>
+              </div>
             )}
           </div>
 
           {myProblems.length === 0 ? (
             <div className="card-surface p-12 text-center">
               <p className="text-rp-muted mb-4">問題がありません</p>
-              <button type="button" onClick={() => setShowForm(true)} className="btn-primary">
-                最初の問題を作成
-              </button>
+              <div className="flex gap-2 justify-center">
+                <button type="button" onClick={() => setActivePanel("bulk")} className="btn-ghost">
+                  一括インポート
+                </button>
+                <button type="button" onClick={() => setActivePanel("new")} className="btn-primary">
+                  最初の問題を作成
+                </button>
+              </div>
             </div>
           ) : (
             <div className="space-y-2">
@@ -494,7 +591,7 @@ export default function CreatorPage() {
                       <div className="flex items-center gap-1">
                         <button
                           type="button"
-                          onClick={() => deleteProblem(p.id)}
+                          onClick={() => void deleteProblem(p.id)}
                           className="text-xs px-3 py-1.5 rounded bg-rp-accent text-white hover:opacity-90 transition-opacity"
                         >
                           削除確認

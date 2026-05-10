@@ -1,5 +1,4 @@
 export type TeamRole = "admin" | "creator" | "solver";
-export type TestcaseType = "sample" | "hidden";
 export type JudgeStatus = "AC" | "WA" | "TLE" | "RE" | "CE" | "IE";
 export type CompareMode = "trimmed-exact";
 
@@ -60,10 +59,8 @@ export interface Testcase {
   id: string;
   eventId: string;
   problemId: string;
-  type: TestcaseType;
   input: string;
   expectedOutput: string;
-  showOnFailure: boolean;
   orderIndex: number;
   createdAt: Date;
 }
@@ -111,10 +108,8 @@ export interface ProblemConfigResponse {
 
 export interface TestcaseResponse {
   id: string;
-  type: TestcaseType;
   input: string;
   expectedOutput: string;
-  showOnFailure: boolean;
   orderIndex: number;
 }
 

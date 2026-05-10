@@ -17,7 +17,6 @@ import type {
   Team,
   TeamMember,
   Testcase,
-  TestcaseType,
   User,
 } from "./types";
 
@@ -470,19 +469,12 @@ function toProblem(doc: QueryDocumentSnapshot): Problem {
 
 function toTestcase(doc: QueryDocumentSnapshot): Testcase {
   const data = doc.data();
-  const type = readString(data, "type");
-  if (type !== "sample" && type !== "hidden") {
-    throw new Error(`Unsupported testcase type: ${type}`);
-  }
-
   return {
     id: doc.id,
     eventId: readString(data, "eventId"),
     problemId: readString(data, "problemId"),
-    type: type as TestcaseType,
     input: readString(data, "input"),
     expectedOutput: readString(data, "expectedOutput"),
-    showOnFailure: readBoolean(data, "showOnFailure"),
     orderIndex: readNumber(data, "orderIndex"),
     createdAt: readDate(data, "createdAt"),
   };

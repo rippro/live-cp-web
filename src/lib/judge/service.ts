@@ -163,10 +163,8 @@ function toProblemConfig(problem: Problem): ProblemConfigResponse {
 function toTestcaseResponse(testcase: Testcase): TestcaseResponse {
   return {
     id: testcase.id,
-    type: testcase.type,
     input: testcase.input,
     expectedOutput: testcase.expectedOutput,
-    showOnFailure: testcase.showOnFailure,
     orderIndex: testcase.orderIndex,
   };
 }

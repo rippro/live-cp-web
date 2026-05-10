@@ -28,15 +28,13 @@ export async function GET(
   if (!d.isPublished && (!session || session.role === "solver")) {
     return NextResponse.json({ error: "Not found" }, { status: 404 });
   }
-  let testcasesQuery = db
-    .collection("testcases")
-    .where("eventId", "==", eventId)
-    .where("problemId", "==", problemId);
-  if (!session || session.role === "solver") {
-    testcasesQuery = testcasesQuery.where("type", "==", "sample") as typeof testcasesQuery;
-  }
+  // solvers see no testcases (all are hidden; samples are in the statement markdown)
+  const canViewTestcases = session && session.role !== "solver";
+  const testcasesQuery = canViewTestcases
+    ? db.collection("testcases").where("eventId", "==", eventId).where("problemId", "==", problemId)
+    : null;
   try {
-    const testcasesSnap = await testcasesQuery.get();
+    const testcasesSnap = testcasesQuery ? await testcasesQuery.get() : null;
     return NextResponse.json({
       eventId: d.eventId,
       id: d.id,
@@ -48,18 +46,19 @@ export async function GET(
       compareMode: d.compareMode,
       isPublished: d.isPublished,
       creatorUid: d.creatorUid ?? null,
-      testcases: testcasesSnap.docs
-        .map((doc) => {
-          const testcase = doc.data();
-          return {
-            id: doc.id,
-            type: testcase.type,
-            input: testcase.input,
-            expectedOutput: testcase.expectedOutput,
-            orderIndex: testcase.orderIndex,
-          };
-        })
-        .sort((a, b) => a.orderIndex - b.orderIndex),
+      testcases: testcasesSnap
+        ? testcasesSnap.docs
+            .map((doc) => {
+              const testcase = doc.data();
+              return {
+                id: doc.id,
+                input: testcase.input as string,
+                expectedOutput: testcase.expectedOutput as string,
+                orderIndex: testcase.orderIndex as number,
+              };
+            })
+            .sort((a, b) => a.orderIndex - b.orderIndex)
+        : [],
       createdAt: (d.createdAt as Timestamp).toDate().toISOString(),
       updatedAt: (d.updatedAt as Timestamp).toDate().toISOString(),
     });
@@ -126,10 +125,10 @@ export async function PATCH(
         id: testcaseId,
         eventId,
         problemId,
-        type: testcase.type,
+        type: "hidden",
         input: testcase.input,
         expectedOutput: testcase.expectedOutput,
-        showOnFailure: testcase.type === "sample",
+        showOnFailure: false,
         orderIndex: testcase.orderIndex,
         createdAt: Timestamp.fromDate(new Date()),
       });
@@ -179,11 +178,10 @@ function readTestcases(value: unknown) {
     .map((item, index) => {
       if (typeof item !== "object" || item === null) return null;
       const record = item as Record<string, unknown>;
-      const type = record.type === "hidden" ? "hidden" : "sample";
       const input = String(record.input ?? "");
       const expectedOutput = String(record.expectedOutput ?? "");
       if (!input && !expectedOutput) return null;
-      return { type, input, expectedOutput, orderIndex: index };
+      return { input, expectedOutput, orderIndex: index };
     })
     .filter((item): item is NonNullable<typeof item> => item !== null);
 }

@@ -82,7 +82,7 @@ export async function POST(request: Request, { params }: { params: Promise<{ eve
   }
 
   const testcases = readTestcases(body.testcases);
-  const data = {
+  const data: Record<string, unknown> = {
     eventId,
     id: problemId,
     title: String(body.title ?? ""),
@@ -106,10 +106,10 @@ export async function POST(request: Request, { params }: { params: Promise<{ eve
       id: testcaseId,
       eventId,
       problemId,
-      type: testcase.type,
+      type: "hidden",
       input: testcase.input,
       expectedOutput: testcase.expectedOutput,
-      showOnFailure: testcase.type === "sample",
+      showOnFailure: false,
       orderIndex: testcase.orderIndex,
       createdAt: Timestamp.fromDate(now),
     });
@@ -128,11 +128,10 @@ function readTestcases(value: unknown) {
     .map((item, index) => {
       if (typeof item !== "object" || item === null) return null;
       const record = item as Record<string, unknown>;
-      const type = record.type === "hidden" ? "hidden" : "sample";
       const input = String(record.input ?? "");
       const expectedOutput = String(record.expectedOutput ?? "");
       if (!input && !expectedOutput) return null;
-      return { type, input, expectedOutput, orderIndex: index };
+      return { input, expectedOutput, orderIndex: index };
     })
     .filter((item): item is NonNullable<typeof item> => item !== null);
 }
