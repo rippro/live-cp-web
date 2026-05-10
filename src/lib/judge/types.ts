@@ -1,4 +1,4 @@
-export type TeamRole = "owner" | "member";
+export type TeamRole = "admin" | "creator" | "solver";
 export type TestcaseType = "sample" | "hidden";
 export type JudgeStatus = "AC" | "WA" | "TLE" | "RE" | "CE" | "IE";
 export type CompareMode = "trimmed-exact";

@@ -38,13 +38,17 @@ All admin endpoints are `POST` endpoints and require the admin bearer token.
 
 - `/admin/users`: `{ "id": "demo", "password": "..." }`
 - `/admin/events`: `{ "id": "rippro-2026-spring", "isActive": true, "startsAt": "2026-04-01T00:00:00.000Z", "endsAt": "2026-06-01T00:00:00.000Z" }`
-- `/admin/teams`: `{ "eventId": "rippro-2026-spring", "name": "Demo Team", "ownerUserId": "demo" }`
+- `/admin/teams`: `{ "eventId": "rippro-2026-spring", "name": "Demo Team", "adminUserId": "demo" }`
+- `/admin/team-members`: `{ "teamId": "...", "userId": "demo", "role": "solver" }`
 - `/admin/problems`: creates problem metadata
 - `/admin/testcase-versions`: creates a complete testcase version and optionally makes it current
 - `/admin/cli-tokens`: `{ "userId": "demo", "teamId": "...", "label": "laptop" }`
 
 Plain invite codes and CLI tokens are returned only by their creation response. The database stores
 only hashes.
+
+Team member roles are `admin`, `creator`, and `solver`. CLI tokens can only be issued for `solver`
+members.
 
 ## Repository Boundary
 

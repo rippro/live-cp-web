@@ -68,6 +68,8 @@ export default function Home() {
               <dd className="font-mono">POST /admin/events</dd>
               <dt className="text-muted-foreground">teams</dt>
               <dd className="font-mono">POST /admin/teams</dd>
+              <dt className="text-muted-foreground">members</dt>
+              <dd className="font-mono">POST /admin/team-members</dd>
               <dt className="text-muted-foreground">problems</dt>
               <dd className="font-mono">POST /admin/problems</dd>
               <dt className="text-muted-foreground">testcases</dt>

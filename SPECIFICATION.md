@@ -40,7 +40,7 @@ teams
 teamMembers
   teamId   : ULID, FK -> teams.id
   userId   : TEXT, FK -> users.id
-  role     : TEXT    ← "owner" | "member"
+  role     : TEXT    ← "admin" | "creator" | "solver"
   joinedAt : TIMESTAMPTZ
 
   unique(teamId, userId)

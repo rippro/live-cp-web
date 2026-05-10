@@ -43,9 +43,10 @@ export interface JudgeAdminRepository {
     eventId: string;
     name: string;
     inviteCodeHash: string;
-    ownerUserId: string;
+    adminUserId: string;
     createdAt: Date;
-  }): Promise<{ team: Team; ownerMembership: TeamMember }>;
+  }): Promise<{ team: Team; adminMembership: TeamMember }>;
+  createTeamMember(input: TeamMember): Promise<TeamMember>;
   createProblem(input: Problem): Promise<Problem>;
   createTestcaseVersion(input: {
     eventId: string;
@@ -257,9 +258,9 @@ export class FirestoreJudgeAdminRepository
     eventId: string;
     name: string;
     inviteCodeHash: string;
-    ownerUserId: string;
+    adminUserId: string;
     createdAt: Date;
-  }): Promise<{ team: Team; ownerMembership: TeamMember }> {
+  }): Promise<{ team: Team; adminMembership: TeamMember }> {
     const team: Team = {
       id: input.id ?? newId(),
       eventId: input.eventId,
@@ -267,21 +268,21 @@ export class FirestoreJudgeAdminRepository
       inviteCodeHash: input.inviteCodeHash,
       createdAt: input.createdAt,
     };
-    const ownerMembership: TeamMember = {
+    const adminMembership: TeamMember = {
       teamId: team.id,
-      userId: input.ownerUserId,
-      role: "owner",
+      userId: input.adminUserId,
+      role: "admin",
       joinedAt: input.createdAt,
     };
 
     await this.db.runTransaction(async (transaction) => {
       const [eventSnapshot, userSnapshot] = await Promise.all([
         transaction.get(this.db.collection("events").doc(team.eventId)),
-        transaction.get(this.db.collection("users").doc(ownerMembership.userId)),
+        transaction.get(this.db.collection("users").doc(adminMembership.userId)),
       ]);
 
       assertExists(eventSnapshot.exists, `events/${team.eventId}`);
-      assertExists(userSnapshot.exists, `users/${ownerMembership.userId}`);
+      assertExists(userSnapshot.exists, `users/${adminMembership.userId}`);
 
       transaction.create(this.db.collection("teams").doc(team.id), {
         eventId: team.eventId,
@@ -292,15 +293,37 @@ export class FirestoreJudgeAdminRepository
       transaction.create(
         this.db
           .collection("teamMembers")
-          .doc(teamMemberDocumentId(ownerMembership.teamId, ownerMembership.userId)),
+          .doc(teamMemberDocumentId(adminMembership.teamId, adminMembership.userId)),
         {
-          ...ownerMembership,
-          joinedAt: Timestamp.fromDate(ownerMembership.joinedAt),
+          ...adminMembership,
+          joinedAt: Timestamp.fromDate(adminMembership.joinedAt),
         },
       );
     });
 
-    return { team, ownerMembership };
+    return { team, adminMembership };
+  }
+
+  async createTeamMember(input: TeamMember): Promise<TeamMember> {
+    await this.db.runTransaction(async (transaction) => {
+      const [teamSnapshot, userSnapshot] = await Promise.all([
+        transaction.get(this.db.collection("teams").doc(input.teamId)),
+        transaction.get(this.db.collection("users").doc(input.userId)),
+      ]);
+
+      assertExists(teamSnapshot.exists, `teams/${input.teamId}`);
+      assertExists(userSnapshot.exists, `users/${input.userId}`);
+
+      transaction.create(
+        this.db.collection("teamMembers").doc(teamMemberDocumentId(input.teamId, input.userId)),
+        {
+          ...input,
+          joinedAt: Timestamp.fromDate(input.joinedAt),
+        },
+      );
+    });
+
+    return input;
   }
 
   async createProblem(input: Problem): Promise<Problem> {
@@ -423,6 +446,10 @@ export class FirestoreJudgeAdminRepository
       assertExists(userSnapshot.exists, `users/${token.userId}`);
       assertExists(teamSnapshot.exists, `teams/${token.teamId}`);
       assertExists(membershipSnapshot.exists, `teamMembers/${token.teamId}/${token.userId}`);
+      const membership = toTeamMember(membershipSnapshot as QueryDocumentSnapshot);
+      if (membership.role !== "solver") {
+        throw new Error("cliTokens.userId must reference a solver team member");
+      }
 
       transaction.create(this.db.collection("_unique").doc(cliTokenHashUniqueId(token.tokenHash)), {
         tokenId: token.id,
@@ -474,6 +501,21 @@ function toTeam(doc: QueryDocumentSnapshot): Team {
     name: readString(data, "name"),
     inviteCodeHash: readString(data, "inviteCodeHash"),
     createdAt: readDate(data, "createdAt"),
+  };
+}
+
+function toTeamMember(doc: QueryDocumentSnapshot): TeamMember {
+  const data = doc.data();
+  const role = readString(data, "role");
+  if (role !== "admin" && role !== "creator" && role !== "solver") {
+    throw new Error(`Unsupported team member role: ${role}`);
+  }
+
+  return {
+    teamId: readString(data, "teamId"),
+    userId: readString(data, "userId"),
+    role,
+    joinedAt: readDate(data, "joinedAt"),
   };
 }
 

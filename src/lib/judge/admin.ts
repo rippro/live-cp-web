@@ -3,7 +3,7 @@ import { NextResponse } from "next/server";
 import { generateCliToken, generateInviteCode, hashPassword, sha256Hex } from "./crypto";
 import { badRequest, forbidden, JudgeError, unauthorized } from "./errors";
 import { createJudgeAdminRepository } from "./repository";
-import type { CompareMode, Event, Problem, TestcaseType } from "./types";
+import type { CompareMode, Event, Problem, TeamRole, TestcaseType } from "./types";
 
 export async function withAdmin<T>(
   request: Request,
@@ -65,7 +65,7 @@ export async function createAdminTeam(
   const result = await repository.createTeam({
     eventId: readSlug(input, "eventId"),
     name: readString(input, "name"),
-    ownerUserId: readId(input, "ownerUserId"),
+    adminUserId: readOptionalId(input, "adminUserId") ?? readId(input, "ownerUserId"),
     inviteCodeHash: sha256Hex(inviteCode),
     createdAt: new Date(),
   });
@@ -77,11 +77,29 @@ export async function createAdminTeam(
       name: result.team.name,
       createdAt: result.team.createdAt.toISOString(),
     },
-    ownerMembership: {
-      ...result.ownerMembership,
-      joinedAt: result.ownerMembership.joinedAt.toISOString(),
+    adminMembership: {
+      ...result.adminMembership,
+      joinedAt: result.adminMembership.joinedAt.toISOString(),
     },
     inviteCode,
+  };
+}
+
+export async function createAdminTeamMember(
+  repository: ReturnType<typeof createJudgeAdminRepository>,
+  body: unknown,
+) {
+  const input = readRecord(body);
+  const membership = await repository.createTeamMember({
+    teamId: readString(input, "teamId"),
+    userId: readId(input, "userId"),
+    role: readTeamRole(input, "role"),
+    joinedAt: new Date(),
+  });
+
+  return {
+    ...membership,
+    joinedAt: membership.joinedAt.toISOString(),
   };
 }
 
@@ -343,6 +361,25 @@ function readId(record: Record<string, unknown>, key: string): string {
   const value = readString(record, key);
   if (!/^[a-zA-Z0-9][a-zA-Z0-9_-]{1,63}$/.test(value)) {
     throw badRequest(`${key} must be 2-64 characters of letters, numbers, underscore, or hyphen`);
+  }
+  return value;
+}
+
+function readOptionalId(record: Record<string, unknown>, key: string): string | null {
+  const value = readOptionalString(record, key);
+  if (!value) {
+    return null;
+  }
+  if (!/^[a-zA-Z0-9][a-zA-Z0-9_-]{1,63}$/.test(value)) {
+    throw badRequest(`${key} must be 2-64 characters of letters, numbers, underscore, or hyphen`);
+  }
+  return value;
+}
+
+function readTeamRole(record: Record<string, unknown>, key: string): TeamRole {
+  const value = readString(record, key);
+  if (value !== "admin" && value !== "creator" && value !== "solver") {
+    throw badRequest(`${key} must be admin, creator, or solver`);
   }
   return value;
 }
