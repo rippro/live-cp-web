@@ -1,14 +1,11 @@
+import type { Timestamp } from "firebase-admin/firestore";
 import { NextResponse } from "next/server";
 import { getAdminFirestore } from "@/lib/firebase/admin";
-import { Timestamp } from "firebase-admin/firestore";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
 
-export async function GET(
-  _request: Request,
-  { params }: { params: Promise<{ eventId: string }> },
-) {
+export async function GET(_request: Request, { params }: { params: Promise<{ eventId: string }> }) {
   const { eventId: _rawEventId } = await params;
   const eventId = decodeURIComponent(_rawEventId);
   const db = getAdminFirestore();
@@ -23,12 +20,14 @@ export async function GET(
     return NextResponse.json({ error: "Not found" }, { status: 404 });
   }
 
-  const d = eventSnap.data()!;
+  const d = eventSnap.data();
+  if (!d) {
+    return NextResponse.json({ error: "Not found" }, { status: 404 });
+  }
   return NextResponse.json({
     id: eventSnap.id,
     isActive: d.isActive as boolean,
     startsAt: (d.startsAt as Timestamp).toDate().toISOString(),
-    endsAt: (d.endsAt as Timestamp).toDate().toISOString(),
     problemCount: problemsSnap.size,
     teamCount: teamsSnap.size,
   });

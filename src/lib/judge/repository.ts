@@ -247,7 +247,6 @@ export class FirestoreJudgeAdminRepository
       .create({
         isActive: input.isActive,
         startsAt: Timestamp.fromDate(input.startsAt),
-        endsAt: Timestamp.fromDate(input.endsAt),
       });
 
     return input;
@@ -525,7 +524,6 @@ function toEvent(doc: QueryDocumentSnapshot): Event {
     id: doc.id,
     isActive: readBoolean(data, "isActive"),
     startsAt: readDate(data, "startsAt"),
-    endsAt: readDate(data, "endsAt"),
   };
 }
 

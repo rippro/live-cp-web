@@ -37,7 +37,7 @@ rules and query indexes for this schema.
 All admin endpoints are `POST` endpoints and require the admin bearer token.
 
 - `/admin/users`: `{ "id": "demo", "password": "..." }`
-- `/admin/events`: `{ "id": "rippro-2026-spring", "isActive": true, "startsAt": "2026-04-01T00:00:00.000Z", "endsAt": "2026-06-01T00:00:00.000Z" }`
+- `/admin/events`: `{ "id": "rippro-2026-spring", "isActive": true, "startsAt": "2026-04-01T00:00:00.000Z" }`
 - `/admin/teams`: `{ "eventId": "rippro-2026-spring", "name": "Demo Team", "adminUserId": "demo" }`
 - `/admin/team-members`: `{ "teamId": "...", "userId": "demo", "role": "solver" }`
 - `/admin/problems`: creates problem metadata

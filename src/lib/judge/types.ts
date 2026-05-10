@@ -40,7 +40,6 @@ export interface Event {
   id: string;
   isActive: boolean;
   startsAt: Date;
-  endsAt: Date;
 }
 
 export interface Problem {

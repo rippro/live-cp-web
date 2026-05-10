@@ -103,7 +103,6 @@ events
   id       : TEXT, PK    ← 人間が読めるスラグ (例: rippro-2026-spring)
   isActive : BOOLEAN
   startsAt : TIMESTAMPTZ
-  endsAt   : TIMESTAMPTZ
 ```
 
 ### 3.2 問題

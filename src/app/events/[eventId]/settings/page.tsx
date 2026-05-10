@@ -1,14 +1,13 @@
 "use client";
 
-import { useEffect, useState } from "react";
 import { useParams } from "next/navigation";
+import { useEffect, useState } from "react";
 import { useAuth } from "@/contexts/AuthContext";
 
 interface EventData {
   id: string;
   isActive: boolean;
   startsAt: string;
-  endsAt: string;
 }
 
 export default function SettingsPage() {
@@ -39,7 +38,6 @@ export default function SettingsPage() {
           eventId,
           isActive: event.isActive,
           startsAt: event.startsAt,
-          endsAt: event.endsAt,
         }),
       });
       if (!res.ok) throw new Error("保存失敗");
@@ -62,12 +60,21 @@ export default function SettingsPage() {
           <div className="inline-block h-6 w-6 animate-spin rounded-full border-2 border-rp-400 border-t-transparent" />
         </div>
       ) : !event ? (
-        <div className="card-surface p-8 text-center"><p className="text-rp-muted">イベントが見つかりません</p></div>
+        <div className="card-surface p-8 text-center">
+          <p className="text-rp-muted">イベントが見つかりません</p>
+        </div>
       ) : (
         <div className="card-surface p-6 space-y-5">
           <div>
-            <label className="block text-xs text-rp-muted mb-1.5">Event ID</label>
-            <input className="input-field opacity-60 cursor-not-allowed" value={event.id} readOnly />
+            <label htmlFor="settings-event-id" className="block text-xs text-rp-muted mb-1.5">
+              Event ID
+            </label>
+            <input
+              id="settings-event-id"
+              className="input-field opacity-60 cursor-not-allowed"
+              value={event.id}
+              readOnly
+            />
           </div>
           <div className="flex items-center justify-between">
             <div>
@@ -76,34 +83,34 @@ export default function SettingsPage() {
             </div>
             <button
               type="button"
-              onClick={() => canEdit && setEvent((e) => e ? { ...e, isActive: !e.isActive } : e)}
+              onClick={() => canEdit && setEvent((e) => (e ? { ...e, isActive: !e.isActive } : e))}
               disabled={!canEdit}
               className={`relative h-6 w-11 rounded-full transition-colors ${
                 event.isActive ? "bg-rp-success" : "bg-rp-600"
               } ${!canEdit ? "opacity-50 cursor-not-allowed" : "cursor-pointer"}`}
             >
-              <span className={`absolute top-0.5 h-5 w-5 rounded-full bg-white shadow transition-transform ${
-                event.isActive ? "translate-x-5" : "translate-x-0.5"
-              }`} />
+              <span
+                className={`absolute top-0.5 h-5 w-5 rounded-full bg-white shadow transition-transform ${
+                  event.isActive ? "translate-x-5" : "translate-x-0.5"
+                }`}
+              />
             </button>
           </div>
           <div>
-            <label className="block text-xs text-rp-muted mb-1.5">開始日時</label>
+            <label htmlFor="settings-starts-at" className="block text-xs text-rp-muted mb-1.5">
+              開始日時
+            </label>
             <input
+              id="settings-starts-at"
               type="datetime-local"
               className="input-field"
               value={event.startsAt.slice(0, 16)}
-              onChange={(e) => canEdit && setEvent((ev) => ev ? { ...ev, startsAt: new Date(e.target.value).toISOString() } : ev)}
-              disabled={!canEdit}
-            />
-          </div>
-          <div>
-            <label className="block text-xs text-rp-muted mb-1.5">終了日時</label>
-            <input
-              type="datetime-local"
-              className="input-field"
-              value={event.endsAt.slice(0, 16)}
-              onChange={(e) => canEdit && setEvent((ev) => ev ? { ...ev, endsAt: new Date(e.target.value).toISOString() } : ev)}
+              onChange={(e) =>
+                canEdit &&
+                setEvent((ev) =>
+                  ev ? { ...ev, startsAt: new Date(e.target.value).toISOString() } : ev,
+                )
+              }
               disabled={!canEdit}
             />
           </div>
@@ -112,7 +119,13 @@ export default function SettingsPage() {
               <button type="button" onClick={save} disabled={saving} className="btn-primary">
                 {saving ? "保存中..." : "変更を保存"}
               </button>
-              {msg && <p className={`text-sm ${msg.startsWith("エラー") ? "text-rp-accent" : "text-rp-success"}`}>{msg}</p>}
+              {msg && (
+                <p
+                  className={`text-sm ${msg.startsWith("エラー") ? "text-rp-accent" : "text-rp-success"}`}
+                >
+                  {msg}
+                </p>
+              )}
             </div>
           )}
           {!canEdit && (

@@ -1,7 +1,7 @@
-import { NextResponse } from "next/server";
-import { getAdminFirestore } from "@/lib/firebase/admin";
-import { getSession } from "@/lib/auth/session";
 import { Timestamp } from "firebase-admin/firestore";
+import { NextResponse } from "next/server";
+import { getSession } from "@/lib/auth/session";
+import { getAdminFirestore } from "@/lib/firebase/admin";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -15,24 +15,29 @@ export async function POST(request: Request) {
   const body = (await request.json()) as Record<string, unknown>;
   const eventId = String(body.eventId ?? "").trim();
   if (!eventId) return NextResponse.json({ error: "eventId required" }, { status: 400 });
-  if (!body.startsAt || !body.endsAt) return NextResponse.json({ error: "startsAt/endsAt required" }, { status: 400 });
+  if (!body.startsAt) return NextResponse.json({ error: "startsAt required" }, { status: 400 });
+  const startsAt = new Date(body.startsAt as string);
+  if (Number.isNaN(startsAt.getTime()))
+    return NextResponse.json({ error: "startsAt invalid" }, { status: 400 });
 
   const db = getAdminFirestore();
   const ref = db.collection("events").doc(eventId);
-  if ((await ref.get()).exists) return NextResponse.json({ error: "Event already exists" }, { status: 409 });
+  if ((await ref.get()).exists)
+    return NextResponse.json({ error: "Event already exists" }, { status: 409 });
 
   const data = {
     isActive: Boolean(body.isActive ?? false),
-    startsAt: Timestamp.fromDate(new Date(body.startsAt as string)),
-    endsAt: Timestamp.fromDate(new Date(body.endsAt as string)),
+    startsAt: Timestamp.fromDate(startsAt),
   };
   await ref.set(data);
-  return NextResponse.json({
-    id: eventId,
-    isActive: data.isActive,
-    startsAt: data.startsAt.toDate().toISOString(),
-    endsAt: data.endsAt.toDate().toISOString(),
-  }, { status: 201 });
+  return NextResponse.json(
+    {
+      id: eventId,
+      isActive: data.isActive,
+      startsAt: data.startsAt.toDate().toISOString(),
+    },
+    { status: 201 },
+  );
 }
 
 export async function DELETE(request: Request) {
@@ -67,16 +72,20 @@ export async function PATCH(request: Request) {
 
   const updates: Record<string, unknown> = {};
   if (body.isActive !== undefined) updates.isActive = Boolean(body.isActive);
-  if (body.startsAt !== undefined) updates.startsAt = Timestamp.fromDate(new Date(body.startsAt as string));
-  if (body.endsAt !== undefined) updates.endsAt = Timestamp.fromDate(new Date(body.endsAt as string));
+  if (body.startsAt !== undefined) {
+    const startsAt = new Date(body.startsAt as string);
+    if (Number.isNaN(startsAt.getTime()))
+      return NextResponse.json({ error: "startsAt invalid" }, { status: 400 });
+    updates.startsAt = Timestamp.fromDate(startsAt);
+  }
 
   await ref.update(updates);
   const updated = await ref.get();
-  const d = updated.data()!;
+  const d = updated.data();
+  if (!d) return NextResponse.json({ error: "Not found" }, { status: 404 });
   return NextResponse.json({
     id: eventId,
     isActive: d.isActive,
     startsAt: (d.startsAt as Timestamp).toDate().toISOString(),
-    endsAt: (d.endsAt as Timestamp).toDate().toISOString(),
   });
 }

@@ -45,14 +45,12 @@ export async function createAdminEvent(
     id: readSlug(input, "id"),
     isActive: readOptionalBoolean(input, "isActive") ?? false,
     startsAt: readDate(input, "startsAt"),
-    endsAt: readDate(input, "endsAt"),
   };
   const created = await repository.createEvent(event);
 
   return {
     ...created,
     startsAt: created.startsAt.toISOString(),
-    endsAt: created.endsAt.toISOString(),
   };
 }
 
