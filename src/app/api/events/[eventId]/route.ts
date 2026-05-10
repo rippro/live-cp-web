@@ -1,4 +1,3 @@
-import type { Timestamp } from "firebase-admin/firestore";
 import { NextResponse } from "next/server";
 import { getAdminFirestore } from "@/lib/firebase/admin";
 
@@ -27,7 +26,6 @@ export async function GET(_request: Request, { params }: { params: Promise<{ eve
   return NextResponse.json({
     id: eventSnap.id,
     isActive: d.isActive as boolean,
-    startsAt: (d.startsAt as Timestamp).toDate().toISOString(),
     problemCount: problemsSnap.size,
     teamCount: teamsSnap.size,
   });
