@@ -35,31 +35,41 @@ export async function GET(
   if (!session || session.role === "solver") {
     testcasesQuery = testcasesQuery.where("type", "==", "sample") as typeof testcasesQuery;
   }
-  const testcasesSnap = await testcasesQuery.orderBy("orderIndex", "asc").get();
-
-  return NextResponse.json({
-    eventId: d.eventId,
-    id: d.id,
-    title: d.title,
-    statement: d.statement,
-    solutionCode: d.solutionCode ?? "",
-    timeLimitMs: d.timeLimitMs,
-    compareMode: d.compareMode,
-    isPublished: d.isPublished,
-    creatorUid: d.creatorUid ?? null,
-    testcases: testcasesSnap.docs.map((doc) => {
-      const testcase = doc.data();
-      return {
-        id: doc.id,
-        type: testcase.type,
-        input: testcase.input,
-        expectedOutput: testcase.expectedOutput,
-        orderIndex: testcase.orderIndex,
-      };
-    }),
-    createdAt: (d.createdAt as Timestamp).toDate().toISOString(),
-    updatedAt: (d.updatedAt as Timestamp).toDate().toISOString(),
-  });
+  try {
+    const testcasesSnap = await testcasesQuery.orderBy("orderIndex", "asc").get();
+    return NextResponse.json({
+      eventId: d.eventId,
+      id: d.id,
+      title: d.title,
+      statement: d.statement,
+      solutionCode: d.solutionCode ?? "",
+      timeLimitMs: d.timeLimitMs,
+      compareMode: d.compareMode,
+      isPublished: d.isPublished,
+      creatorUid: d.creatorUid ?? null,
+      testcases: testcasesSnap.docs.map((doc) => {
+        const testcase = doc.data();
+        return {
+          id: doc.id,
+          type: testcase.type,
+          input: testcase.input,
+          expectedOutput: testcase.expectedOutput,
+          orderIndex: testcase.orderIndex,
+        };
+      }),
+      createdAt: (d.createdAt as Timestamp).toDate().toISOString(),
+      updatedAt: (d.updatedAt as Timestamp).toDate().toISOString(),
+    });
+  } catch (error) {
+    console.error("Failed to list testcases", error);
+    return NextResponse.json(
+      {
+        error: "Failed to list testcases",
+        detail: error instanceof Error ? error.message : String(error),
+      },
+      { status: 500 },
+    );
+  }
 }
 
 export async function PATCH(

@@ -18,25 +18,36 @@ export async function GET(_request: Request, { params }: { params: Promise<{ eve
     query = query.where("isPublished", "==", true) as typeof query;
   }
 
-  const snap = await query.orderBy("id", "asc").get();
-  const problems = snap.docs.map((doc) => {
-    const d = doc.data();
-    return {
-      eventId: d.eventId,
-      id: d.id,
-      title: d.title,
-      statement: d.statement,
-      solutionCode: d.solutionCode ?? "",
-      timeLimitMs: d.timeLimitMs,
-      compareMode: d.compareMode,
-      isPublished: d.isPublished,
-      creatorUid: d.creatorUid ?? null,
-      createdAt: (d.createdAt as Timestamp).toDate().toISOString(),
-      updatedAt: (d.updatedAt as Timestamp).toDate().toISOString(),
-    };
-  });
+  try {
+    const snap = await query.orderBy("id", "asc").get();
+    const problems = snap.docs.map((doc) => {
+      const d = doc.data();
+      return {
+        eventId: d.eventId,
+        id: d.id,
+        title: d.title,
+        statement: d.statement,
+        solutionCode: d.solutionCode ?? "",
+        timeLimitMs: d.timeLimitMs,
+        compareMode: d.compareMode,
+        isPublished: d.isPublished,
+        creatorUid: d.creatorUid ?? null,
+        createdAt: (d.createdAt as Timestamp).toDate().toISOString(),
+        updatedAt: (d.updatedAt as Timestamp).toDate().toISOString(),
+      };
+    });
 
-  return NextResponse.json({ problems });
+    return NextResponse.json({ problems });
+  } catch (error) {
+    console.error("Failed to list problems", error);
+    return NextResponse.json(
+      {
+        error: "Failed to list problems",
+        detail: error instanceof Error ? error.message : String(error),
+      },
+      { status: 500 },
+    );
+  }
 }
 
 export async function POST(request: Request, { params }: { params: Promise<{ eventId: string }> }) {

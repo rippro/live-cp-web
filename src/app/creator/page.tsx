@@ -307,9 +307,22 @@ export default function CreatorPage() {
   useEffect(() => {
     if (!selectedEvent) return;
     fetch(`/api/events/${selectedEvent}/problems`)
-      .then((r) => r.json() as Promise<{ problems: Problem[] }>)
+      .then(async (r) => {
+        const d = (await r.json()) as {
+          problems?: Problem[];
+          error?: string;
+          detail?: string;
+        };
+        if (!r.ok) {
+          throw new Error(d.detail ?? d.error ?? "問題の取得に失敗しました");
+        }
+        return d;
+      })
       .then((d) => setProblems(d.problems ?? []))
-      .catch(() => setProblems([]));
+      .catch((error: unknown) => {
+        console.error("Failed to load creator problems", error);
+        setProblems([]);
+      });
   }, [selectedEvent]);
 
   async function deleteProblem(problemId: string) {
@@ -374,7 +387,7 @@ export default function CreatorPage() {
                   fetch(`/api/events/${selectedEvent}/problems`)
                     .then((r) => r.json() as Promise<{ problems: Problem[] }>)
                     .then((d) => setProblems(d.problems ?? []))
-                    .catch(() => {});
+                    .catch((error: unknown) => console.error("Failed to reload problems", error));
                 }}
                 onCancel={() => setShowForm(false)}
               />
@@ -395,7 +408,7 @@ export default function CreatorPage() {
                   fetch(`/api/events/${selectedEvent}/problems`)
                     .then((r) => r.json() as Promise<{ problems: Problem[] }>)
                     .then((d) => setProblems(d.problems ?? []))
-                    .catch(() => {});
+                    .catch((error: unknown) => console.error("Failed to reload problems", error));
                 }}
                 onCancel={() => setEditProblem(null)}
               />

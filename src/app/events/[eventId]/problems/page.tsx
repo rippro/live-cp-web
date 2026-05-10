@@ -8,24 +8,20 @@ interface PageProps {
 }
 
 async function getProblems(eventId: string, showAll: boolean) {
-  try {
-    const db = getAdminFirestore();
-    let query = db.collection("problems").where("eventId", "==", eventId);
-    if (!showAll) query = query.where("isPublished", "==", true) as typeof query;
-    const snap = await query.orderBy("id", "asc").get();
-    return snap.docs.map((doc) => {
-      const d = doc.data();
-      return {
-        id: d.id as string,
-        title: d.title as string,
-        isPublished: d.isPublished as boolean,
-        timeLimitMs: d.timeLimitMs as number,
-        updatedAt: (d.updatedAt as Timestamp).toDate().toISOString(),
-      };
-    });
-  } catch {
-    return [];
-  }
+  const db = getAdminFirestore();
+  let query = db.collection("problems").where("eventId", "==", eventId);
+  if (!showAll) query = query.where("isPublished", "==", true) as typeof query;
+  const snap = await query.orderBy("id", "asc").get();
+  return snap.docs.map((doc) => {
+    const d = doc.data();
+    return {
+      id: d.id as string,
+      title: d.title as string,
+      isPublished: d.isPublished as boolean,
+      timeLimitMs: d.timeLimitMs as number,
+      updatedAt: (d.updatedAt as Timestamp).toDate().toISOString(),
+    };
+  });
 }
 
 async function getSolveCountByProblem(eventId: string) {
@@ -38,7 +34,8 @@ async function getSolveCountByProblem(eventId: string) {
       map.set(pid, (map.get(pid) ?? 0) + 1);
     }
     return map;
-  } catch {
+  } catch (error) {
+    console.error("Failed to get solve counts", error);
     return new Map<string, number>();
   }
 }
@@ -50,7 +47,10 @@ export default async function ProblemsPage({ params }: PageProps) {
   const showAll = session?.role === "admin" || session?.role === "creator";
 
   const [problems, solves] = await Promise.all([
-    getProblems(eventId, showAll),
+    getProblems(eventId, showAll).catch((error: unknown) => {
+      console.error("Failed to render problems page", error);
+      return [];
+    }),
     getSolveCountByProblem(eventId),
   ]);
 

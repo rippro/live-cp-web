@@ -42,7 +42,8 @@ async function getProblemWithTestcases(eventId: string, problemId: string, showA
         orderIndex: t.data().orderIndex as number,
       })),
     };
-  } catch {
+  } catch (error) {
+    console.error("Failed to render problem page", error);
     return null;
   }
 }
