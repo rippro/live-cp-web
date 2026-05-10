@@ -10,9 +10,21 @@ interface Problem {
   eventId: string;
   id: string;
   title: string;
+  statement: string;
+  solutionCode: string;
+  timeLimitMs: number;
+  testcases: Testcase[];
   isPublished: boolean;
   creatorUid: string | null;
   updatedAt: string;
+}
+
+interface Testcase {
+  id?: string;
+  type: "sample" | "hidden";
+  input: string;
+  expectedOutput: string;
+  orderIndex?: number;
 }
 
 interface Event {
@@ -32,17 +44,17 @@ function ProblemForm({
   onCancel: () => void;
 }) {
   const [form, setForm] = useState({
-    id: initial?.id ?? "",
     title: initial?.title ?? "",
-    statement: "",
-    constraints: "",
-    inputFormat: "",
-    outputFormat: "",
-    timeLimitMs: 2000,
-    allowedLanguages: "cpp,python",
-    testcaseVersion: "v1",
+    statement: initial?.statement ?? "",
+    solutionCode: initial?.solutionCode ?? "",
+    timeLimitMs: initial?.timeLimitMs ?? 2000,
     isPublished: initial?.isPublished ?? false,
   });
+  const [testcases, setTestcases] = useState<Testcase[]>(
+    initial?.testcases?.length
+      ? initial.testcases
+      : [{ type: "sample", input: "", expectedOutput: "" }],
+  );
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState("");
   const isEdit = Boolean(initial?.id);
@@ -53,12 +65,12 @@ function ProblemForm({
     setError("");
     try {
       const url = isEdit
-        ? `/api/events/${eventId}/problems/${form.id}`
+        ? `/api/events/${eventId}/problems/${initial?.id}`
         : `/api/events/${eventId}/problems`;
       const method = isEdit ? "PATCH" : "POST";
       const body = {
         ...form,
-        allowedLanguages: form.allowedLanguages.split(",").map((s) => s.trim()).filter(Boolean),
+        testcases,
       };
       const res = await fetch(url, {
         method,
@@ -78,48 +90,74 @@ function ProblemForm({
     }
   }
 
+  function updateTestcase(index: number, updates: Partial<Testcase>) {
+    setTestcases((cases) => cases.map((testcase, i) => (
+      i === index ? { ...testcase, ...updates } : testcase
+    )));
+  }
+
+  function addTestcase(type: "sample" | "hidden") {
+    setTestcases((cases) => [...cases, { type, input: "", expectedOutput: "" }]);
+  }
+
+  function removeTestcase(index: number) {
+    setTestcases((cases) => cases.filter((_, i) => i !== index));
+  }
+
   return (
     <form onSubmit={submit} className="space-y-4">
-      {!isEdit && (
-        <div>
-          <label className="block text-xs text-rp-muted mb-1.5">問題 ID (例: 001)</label>
-          <input className="input-field" value={form.id} onChange={(e) => setForm((f) => ({ ...f, id: e.target.value }))} placeholder="001" required />
-        </div>
-      )}
       <div>
         <label className="block text-xs text-rp-muted mb-1.5">タイトル</label>
         <input className="input-field" value={form.title} onChange={(e) => setForm((f) => ({ ...f, title: e.target.value }))} placeholder="A + B 問題" required />
       </div>
       <div>
-        <label className="block text-xs text-rp-muted mb-1.5">問題文</label>
-        <textarea className="input-field min-h-[100px] resize-y" value={form.statement} onChange={(e) => setForm((f) => ({ ...f, statement: e.target.value }))} required />
+        <label className="block text-xs text-rp-muted mb-1.5">問題文 Markdown</label>
+        <textarea className="input-field min-h-[220px] resize-y font-mono" value={form.statement} onChange={(e) => setForm((f) => ({ ...f, statement: e.target.value }))} placeholder={"# 問題文\n\n$1 \\le N \\le 10^5$"} required />
+      </div>
+      <div>
+        <label className="block text-xs text-rp-muted mb-1.5">模範解答コード</label>
+        <textarea className="input-field min-h-[180px] resize-y font-mono" value={form.solutionCode} onChange={(e) => setForm((f) => ({ ...f, solutionCode: e.target.value }))} placeholder={"#include <bits/stdc++.h>\nusing namespace std;\nint main() {\n  return 0;\n}"} />
+      </div>
+      <div>
+        <div className="mb-3 flex items-center justify-between">
+          <label className="block text-xs text-rp-muted">テストケース</label>
+          <div className="flex gap-2">
+            <button type="button" onClick={() => addTestcase("sample")} className="btn-ghost py-1.5 px-3 text-xs">サンプル追加</button>
+            <button type="button" onClick={() => addTestcase("hidden")} className="btn-ghost py-1.5 px-3 text-xs">隠し追加</button>
+          </div>
+        </div>
+        <div className="space-y-4">
+          {testcases.map((testcase, index) => (
+            <div key={`${testcase.id ?? "new"}-${index}`} className="rounded-lg border border-rp-border bg-rp-800 p-4">
+              <div className="mb-3 flex items-center justify-between gap-3">
+                <select
+                  value={testcase.type}
+                  onChange={(e) => updateTestcase(index, { type: e.target.value === "hidden" ? "hidden" : "sample" })}
+                  className="input-field w-36 bg-rp-900"
+                >
+                  <option value="sample">sample</option>
+                  <option value="hidden">hidden</option>
+                </select>
+                <button type="button" onClick={() => removeTestcase(index)} className="btn-ghost py-1.5 px-3 text-xs" disabled={testcases.length === 1}>削除</button>
+              </div>
+              <div className="grid gap-3 md:grid-cols-2">
+                <div>
+                  <label className="mb-1.5 block text-[10px] font-medium uppercase tracking-widest text-rp-muted">Input</label>
+                  <textarea className="input-field min-h-[120px] resize-y font-mono" value={testcase.input} onChange={(e) => updateTestcase(index, { input: e.target.value })} />
+                </div>
+                <div>
+                  <label className="mb-1.5 block text-[10px] font-medium uppercase tracking-widest text-rp-muted">Expected Output</label>
+                  <textarea className="input-field min-h-[120px] resize-y font-mono" value={testcase.expectedOutput} onChange={(e) => updateTestcase(index, { expectedOutput: e.target.value })} />
+                </div>
+              </div>
+            </div>
+          ))}
+        </div>
       </div>
       <div className="grid gap-4 sm:grid-cols-2">
         <div>
-          <label className="block text-xs text-rp-muted mb-1.5">制約</label>
-          <textarea className="input-field min-h-[80px] resize-y" value={form.constraints} onChange={(e) => setForm((f) => ({ ...f, constraints: e.target.value }))} />
-        </div>
-        <div>
-          <label className="block text-xs text-rp-muted mb-1.5">入力形式</label>
-          <textarea className="input-field min-h-[80px] resize-y" value={form.inputFormat} onChange={(e) => setForm((f) => ({ ...f, inputFormat: e.target.value }))} />
-        </div>
-        <div>
-          <label className="block text-xs text-rp-muted mb-1.5">出力形式</label>
-          <textarea className="input-field min-h-[80px] resize-y" value={form.outputFormat} onChange={(e) => setForm((f) => ({ ...f, outputFormat: e.target.value }))} />
-        </div>
-        <div className="space-y-3">
-          <div>
-            <label className="block text-xs text-rp-muted mb-1.5">制限時間 (ms)</label>
-            <input type="number" className="input-field" value={form.timeLimitMs} onChange={(e) => setForm((f) => ({ ...f, timeLimitMs: Number(e.target.value) }))} min={100} />
-          </div>
-          <div>
-            <label className="block text-xs text-rp-muted mb-1.5">言語 (カンマ区切り)</label>
-            <input className="input-field" value={form.allowedLanguages} onChange={(e) => setForm((f) => ({ ...f, allowedLanguages: e.target.value }))} placeholder="cpp,python" />
-          </div>
-          <div>
-            <label className="block text-xs text-rp-muted mb-1.5">TC バージョン</label>
-            <input className="input-field" value={form.testcaseVersion} onChange={(e) => setForm((f) => ({ ...f, testcaseVersion: e.target.value }))} placeholder="v1" />
-          </div>
+          <label className="block text-xs text-rp-muted mb-1.5">制限時間 (ms)</label>
+          <input type="number" className="input-field" value={form.timeLimitMs} onChange={(e) => setForm((f) => ({ ...f, timeLimitMs: Number(e.target.value) }))} min={100} />
         </div>
       </div>
       <div className="flex items-center gap-2">
@@ -174,6 +212,14 @@ export default function CreatorPage() {
     setDeleteConfirm(null);
   }
 
+  async function openEdit(problemId: string) {
+    const res = await fetch(`/api/events/${selectedEvent}/problems/${problemId}`);
+    if (!res.ok) return;
+    const problem = (await res.json()) as Problem;
+    setEditProblem(problem);
+    setShowForm(false);
+  }
+
   const myProblems = session?.role === "admin"
     ? problems
     : problems.filter((p) => p.creatorUid === (session as { uid: string } | undefined)?.uid);
@@ -209,6 +255,7 @@ export default function CreatorPage() {
             <div className="card-surface p-6 mb-6">
               <h2 className="font-display text-lg font-bold text-rp-100 mb-4">新規問題作成</h2>
               <ProblemForm
+                key="new"
                 eventId={selectedEvent}
                 onSave={() => {
                   setShowForm(false);
@@ -226,6 +273,7 @@ export default function CreatorPage() {
             <div className="card-surface p-6 mb-6">
               <h2 className="font-display text-lg font-bold text-rp-100 mb-4">問題を編集: {editProblem.id}</h2>
               <ProblemForm
+                key={editProblem.id}
                 eventId={selectedEvent}
                 initial={editProblem}
                 onSave={() => {
@@ -288,7 +336,7 @@ export default function CreatorPage() {
                     </Link>
                     <button
                       type="button"
-                      onClick={() => setEditProblem(p)}
+                      onClick={() => void openEdit(p.id)}
                       className="btn-ghost py-1.5 px-3 text-xs"
                     >
                       編集

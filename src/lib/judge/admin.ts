@@ -3,7 +3,7 @@ import { NextResponse } from "next/server";
 import { generateCliToken, generateInviteCode, hashPassword, sha256Hex } from "./crypto";
 import { badRequest, forbidden, JudgeError, unauthorized } from "./errors";
 import { createJudgeAdminRepository } from "./repository";
-import type { CompareMode, Event, Problem, TeamRole, TestcaseType } from "./types";
+import type { CompareMode, Event, Problem, TeamRole } from "./types";
 
 export async function withAdmin<T>(
   request: Request,
@@ -117,13 +117,9 @@ export async function createAdminProblem(
     id: readProblemId(input, "id"),
     title: readString(input, "title"),
     statement: readString(input, "statement"),
-    constraints: readString(input, "constraints"),
-    inputFormat: readString(input, "inputFormat"),
-    outputFormat: readString(input, "outputFormat"),
-    allowedLanguages: readStringArray(input, "allowedLanguages"),
+    solutionCode: readOptionalString(input, "solutionCode") ?? "",
     timeLimitMs: readPositiveInteger(input, "timeLimitMs"),
     compareMode: compareMode as CompareMode,
-    testcaseVersion: readString(input, "testcaseVersion"),
     isPublished: readOptionalBoolean(input, "isPublished") ?? false,
     createdAt: now,
     updatedAt: now,
@@ -131,49 +127,6 @@ export async function createAdminProblem(
   const created = await repository.createProblem(problem);
 
   return serializeProblem(created);
-}
-
-export async function createAdminTestcaseVersion(
-  repository: ReturnType<typeof createJudgeAdminRepository>,
-  body: unknown,
-) {
-  const input = readRecord(body);
-  const casesValue = input.cases;
-  if (!Array.isArray(casesValue) || casesValue.length === 0) {
-    throw badRequest("cases must be a non-empty array");
-  }
-
-  const cases = casesValue.map((value, index) => {
-    const testcase = readRecord(value, `cases[${index}]`);
-    const type = readString(testcase, "type");
-    if (type !== "sample" && type !== "hidden") {
-      throw badRequest(`cases[${index}].type must be sample or hidden`);
-    }
-
-    return {
-      type: type as TestcaseType,
-      input: readString(testcase, "input"),
-      expectedOutput: readString(testcase, "expectedOutput"),
-      showOnFailure: readBoolean(testcase, "showOnFailure"),
-      orderIndex: readNonNegativeInteger(testcase, "orderIndex"),
-    };
-  });
-
-  const created = await repository.createTestcaseVersion({
-    eventId: readSlug(input, "eventId"),
-    problemId: readProblemId(input, "problemId"),
-    version: readString(input, "version"),
-    cases,
-    createdAt: new Date(),
-    setCurrent: readOptionalBoolean(input, "setCurrent") ?? true,
-  });
-
-  return {
-    cases: created.map((testcase) => ({
-      ...testcase,
-      createdAt: testcase.createdAt.toISOString(),
-    })),
-  };
 }
 
 export async function createAdminCliToken(
@@ -287,26 +240,6 @@ function readOptionalString(record: Record<string, unknown>, key: string): strin
   return value;
 }
 
-function readStringArray(record: Record<string, unknown>, key: string): string[] {
-  const value = record[key];
-  if (
-    !Array.isArray(value) ||
-    value.length === 0 ||
-    value.some((item) => typeof item !== "string")
-  ) {
-    throw badRequest(`${key} must be a non-empty string array`);
-  }
-  return value as string[];
-}
-
-function readBoolean(record: Record<string, unknown>, key: string): boolean {
-  const value = record[key];
-  if (typeof value !== "boolean") {
-    throw badRequest(`${key} must be a boolean`);
-  }
-  return value;
-}
-
 function readOptionalBoolean(record: Record<string, unknown>, key: string): boolean | null {
   const value = record[key];
   if (value === undefined || value === null) {
@@ -322,14 +255,6 @@ function readPositiveInteger(record: Record<string, unknown>, key: string): numb
   const value = record[key];
   if (typeof value !== "number" || !Number.isInteger(value) || value <= 0) {
     throw badRequest(`${key} must be a positive integer`);
-  }
-  return value;
-}
-
-function readNonNegativeInteger(record: Record<string, unknown>, key: string): number {
-  const value = record[key];
-  if (typeof value !== "number" || !Number.isInteger(value) || value < 0) {
-    throw badRequest(`${key} must be a non-negative integer`);
   }
   return value;
 }

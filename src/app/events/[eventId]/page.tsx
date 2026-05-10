@@ -104,16 +104,16 @@ export default async function EventHomePage({ params }: PageProps) {
       </div>
 
       {/* Stats */}
-      <div className="grid grid-cols-2 sm:grid-cols-4 divide-x divide-y sm:divide-y-0 divide-rp-border border border-rp-border rounded-lg mb-10 overflow-hidden">
+      <div className="bg-rp-border grid grid-cols-2 sm:grid-cols-4 gap-px rounded-lg overflow-hidden mb-10">
         {stats.map((s) => (
-          <div key={s.label} className="px-6 py-5 bg-rp-800">
-            <div className="text-3xl font-extrabold tracking-tight text-rp-highlight mb-1">
+          <div key={s.label} className="bg-rp-900 px-6 py-6">
+            <div className="text-4xl font-extrabold tracking-tight text-rp-100 mb-1 tabular-nums" style={{ letterSpacing: "-0.03em" }}>
               {s.value}
               {s.total !== undefined && s.total !== s.value && (
-                <span className="text-base text-rp-muted font-normal"> / {s.total}</span>
+                <span className="text-xl text-rp-muted font-normal"> / {s.total}</span>
               )}
             </div>
-            <div className="text-xs text-rp-muted">{s.label}</div>
+            <div className="text-xs text-rp-muted font-medium mt-0.5">{s.label}</div>
           </div>
         ))}
       </div>

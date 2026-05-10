@@ -37,9 +37,17 @@ export function generateCliToken(): string {
 
 const UNAMBIGUOUS = "23456789ABCDEFGHJKMNPQRSTVWXYZ";
 
-export function generateInviteCode(): string {
-  const bytes = randomBytes(5);
+export function generateUnambiguousCode(length: number): string {
+  const bytes = randomBytes(length);
   return Array.from(bytes, (b) => UNAMBIGUOUS[b % UNAMBIGUOUS.length]).join("");
+}
+
+export function generateInviteCode(): string {
+  return generateUnambiguousCode(5);
+}
+
+export function generateProblemId(): string {
+  return generateUnambiguousCode(4);
 }
 
 export function newId(): string {

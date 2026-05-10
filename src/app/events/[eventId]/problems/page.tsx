@@ -19,9 +19,7 @@ async function getProblems(eventId: string, showAll: boolean) {
         id: d.id as string,
         title: d.title as string,
         isPublished: d.isPublished as boolean,
-        allowedLanguages: d.allowedLanguages as string[],
         timeLimitMs: d.timeLimitMs as number,
-        testcaseVersion: d.testcaseVersion as string,
         updatedAt: (d.updatedAt as Timestamp).toDate().toISOString(),
       };
     });
@@ -71,49 +69,53 @@ export default async function ProblemsPage({ params }: PageProps) {
           <p className="text-rp-muted text-sm">問題はまだ公開されていません</p>
         </div>
       ) : (
-        <div className="divide-y divide-rp-border">
+        <>
+          {/* Table header */}
+          <div className="hidden sm:grid grid-cols-[48px_1fr_100px_80px] gap-4 px-4 pb-2 text-[11px] font-medium text-rp-muted uppercase tracking-wider">
+            <span>#</span>
+            <span>問題名</span>
+            <span>条件</span>
+            <span className="text-right">AC</span>
+          </div>
+        <div className="divide-y divide-rp-border border-t border-rp-border">
           {problems.map((p) => (
             <Link
               key={p.id}
               href={`/events/${eventId}/problems/${p.id}`}
-              className="flex items-center gap-5 py-5 group hover:bg-rp-800 -mx-4 px-4 transition-colors rounded-lg"
+              className="flex items-center gap-4 py-4 -mx-4 px-4 group hover:bg-rp-800 transition-colors"
             >
-              <div className="flex-shrink-0 w-10 h-10 rounded-lg bg-rp-highlight-tint border border-rp-highlight/20 flex items-center justify-center group-hover:bg-rp-highlight group-hover:border-rp-highlight transition-colors">
-                <span className="font-mono text-xs font-bold text-rp-highlight group-hover:text-white transition-colors">{p.id}</span>
+              {/* ID */}
+              <div className="flex-shrink-0 w-10 text-center font-mono text-sm font-bold text-rp-highlight">
+                {p.id}
               </div>
-              <div className="flex-1 min-w-0">
-                <div className="flex items-center gap-2 mb-1">
-                  <h2 className="text-sm font-semibold text-rp-100 group-hover:text-rp-400 transition-colors truncate">
-                    {p.title}
-                  </h2>
-                  {!p.isPublished && (
-                    <span className="flex-shrink-0 text-[10px] font-mono px-1.5 py-0.5 rounded border border-rp-border text-rp-muted bg-rp-800">
-                      DRAFT
-                    </span>
-                  )}
-                </div>
-                <div className="flex items-center gap-3 text-xs text-rp-muted font-mono">
-                  <span>{p.timeLimitMs}ms</span>
-                  <span className="text-rp-600">·</span>
-                  <span>{p.allowedLanguages.join(" / ")}</span>
-                  <span className="text-rp-600">·</span>
-                  <span>v{p.testcaseVersion}</span>
-                </div>
+              {/* Name */}
+              <div className="flex-1 min-w-0 flex items-center gap-2">
+                <h2 className="text-sm font-medium text-rp-100 truncate group-hover:text-rp-400 transition-colors">
+                  {p.title}
+                </h2>
+                {!p.isPublished && (
+                  <span className="flex-shrink-0 text-[10px] font-mono px-1.5 py-0.5 rounded bg-rp-800 border border-rp-border text-rp-muted">
+                    DRAFT
+                  </span>
+                )}
               </div>
-              <div className="flex-shrink-0 flex items-center gap-4">
-                <div className="text-right">
-                  <div className="text-lg font-bold text-rp-success font-mono">
-                    {solves.get(p.id) ?? 0}
-                  </div>
-                  <div className="text-[10px] text-rp-muted uppercase tracking-wide">AC</div>
-                </div>
-                <svg width="15" height="15" viewBox="0 0 15 15" fill="none" className="text-rp-600 group-hover:text-rp-400 transition-colors">
-                  <path d="M3.5 7.5h8M8 4l3.5 3.5L8 11" stroke="currentColor" strokeWidth="1.4" strokeLinecap="round" strokeLinejoin="round" />
+              {/* Time limit */}
+              <div className="hidden sm:block w-24 text-xs font-mono text-rp-muted flex-shrink-0">
+                {p.timeLimitMs}ms
+              </div>
+              {/* AC count + arrow */}
+              <div className="flex items-center gap-3 flex-shrink-0">
+                <span className="w-10 text-right text-base font-bold text-rp-success font-mono tabular-nums">
+                  {solves.get(p.id) ?? 0}
+                </span>
+                <svg width="14" height="14" viewBox="0 0 14 14" fill="none" className="text-rp-600 group-hover:text-rp-400 transition-colors">
+                  <path d="M3 7h8M7 3l4 4-4 4" stroke="currentColor" strokeWidth="1.4" strokeLinecap="round" strokeLinejoin="round" />
                 </svg>
               </div>
             </Link>
           ))}
         </div>
+        </>
       )}
     </div>
   );

@@ -1,5 +1,5 @@
 import { sha256Hex } from "./crypto";
-import { badRequest, conflict, forbidden, notFound, unauthorized } from "./errors";
+import { badRequest, forbidden, notFound, unauthorized } from "./errors";
 import type { JudgeRepository } from "./repository";
 import type {
   AcSubmissionInput,
@@ -54,20 +54,10 @@ export async function getTestcases(
   auth: AuthenticatedCliToken,
   eventId: string,
   problemId: string,
-  version: string | null,
-): Promise<{ version: string; cases: TestcaseResponse[] }> {
-  if (!version) {
-    throw badRequest("version is required");
-  }
-
-  const { problem } = await getPublishedActiveProblem(repository, auth, eventId, problemId);
-  if (version !== problem.testcaseVersion) {
-    throw conflict("version must match the current testcaseVersion");
-  }
-
-  const testcases = await repository.listTestcases(eventId, problemId, version);
+): Promise<{ cases: TestcaseResponse[] }> {
+  await getPublishedActiveProblem(repository, auth, eventId, problemId);
+  const testcases = await repository.listTestcases(eventId, problemId);
   return {
-    version,
     cases: testcases.map(toTestcaseResponse),
   };
 }
@@ -81,14 +71,7 @@ export async function createAcceptedSubmission(
   now = new Date(),
 ): Promise<AcSubmissionResponse> {
   const input = parseAcSubmissionInput(body);
-  const { problem } = await getPublishedActiveProblem(repository, auth, eventId, problemId);
-
-  if (!problem.allowedLanguages.includes(input.language)) {
-    throw badRequest("language is not allowed for this problem");
-  }
-  if (input.testcaseVersion !== problem.testcaseVersion) {
-    throw conflict("testcaseVersion must match the current testcaseVersion");
-  }
+  await getPublishedActiveProblem(repository, auth, eventId, problemId);
   if (input.status !== "AC") {
     throw badRequest('status must be "AC"');
   }
@@ -96,7 +79,7 @@ export async function createAcceptedSubmission(
     throw badRequest('all case statuses must be "AC"');
   }
 
-  const testcases = await repository.listTestcases(eventId, problemId, problem.testcaseVersion);
+  const testcases = await repository.listTestcases(eventId, problemId);
   assertSubmissionCasesMatchTestcases(input, testcases);
 
   const result = await repository.createAcceptedSubmission({
@@ -105,9 +88,7 @@ export async function createAcceptedSubmission(
       teamId: auth.token.teamId,
       eventId,
       problemId,
-      language: input.language,
       sourceHash: input.sourceHash,
-      testcaseVersion: input.testcaseVersion,
       status: "AC",
       maxTimeMs: input.maxTimeMs,
     },
@@ -174,13 +155,8 @@ function toProblemConfig(problem: Problem): ProblemConfigResponse {
     id: problem.id,
     title: problem.title,
     statement: problem.statement,
-    constraints: problem.constraints,
-    inputFormat: problem.inputFormat,
-    outputFormat: problem.outputFormat,
-    allowedLanguages: problem.allowedLanguages,
     timeLimitMs: problem.timeLimitMs,
     compareMode: problem.compareMode,
-    testcaseVersion: problem.testcaseVersion,
   };
 }
 
@@ -200,9 +176,7 @@ function parseAcSubmissionInput(body: unknown): AcSubmissionInput {
     throw badRequest("request body must be an object");
   }
 
-  const language = readString(body, "language");
   const sourceHash = readString(body, "sourceHash");
-  const testcaseVersion = readString(body, "testcaseVersion");
   const status = readJudgeStatus(body, "status");
   const maxTimeMs = readNonNegativeInteger(body, "maxTimeMs");
   const casesValue = body.cases;
@@ -228,9 +202,7 @@ function parseAcSubmissionInput(body: unknown): AcSubmissionInput {
   }
 
   return {
-    language,
     sourceHash,
-    testcaseVersion,
     status,
     maxTimeMs,
     cases,
@@ -257,7 +229,7 @@ function assertSubmissionCasesMatchTestcases(
 
   for (const caseId of actualIds) {
     if (!expectedIds.has(caseId)) {
-      throw badRequest("cases contain a testcase outside the target problem/version");
+      throw badRequest("cases contain a testcase outside the target problem");
     }
   }
 }

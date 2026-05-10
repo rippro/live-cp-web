@@ -8,7 +8,6 @@ interface Submission {
   userId: string;
   teamId: string;
   problemId: string;
-  language: string;
   status: string;
   maxTimeMs: number;
   createdAt: string;
@@ -55,7 +54,7 @@ export default function SubmissionsPage() {
           <table className="w-full text-sm">
             <thead>
               <tr className="border-b border-rp-border">
-                {["#", "User", "Problem", "Language", "Time", "Submitted"].map((h) => (
+                {["#", "User", "Problem", "Time", "Submitted"].map((h) => (
                   <th key={h} className="px-4 py-3 text-left text-xs font-mono text-rp-muted font-medium">
                     {h}
                   </th>
@@ -68,7 +67,6 @@ export default function SubmissionsPage() {
                   <td className="px-4 py-3 font-mono text-xs text-rp-500">{i + 1}</td>
                   <td className="px-4 py-3 font-mono text-xs text-rp-100">{s.userId}</td>
                   <td className="px-4 py-3 font-mono text-xs text-rp-300">{s.problemId}</td>
-                  <td className="px-4 py-3 font-mono text-xs text-rp-muted">{s.language}</td>
                   <td className="px-4 py-3 font-mono text-xs text-rp-muted">{s.maxTimeMs}ms</td>
                   <td className="px-4 py-3 font-mono text-xs text-rp-muted">
                     {new Date(s.createdAt).toLocaleString("ja-JP", { month: "2-digit", day: "2-digit", hour: "2-digit", minute: "2-digit" })}

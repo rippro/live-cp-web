@@ -27,7 +27,7 @@ export interface JudgeRepository {
   findTeam(id: string): Promise<Team | null>;
   findEvent(id: string): Promise<Event | null>;
   findProblem(eventId: string, problemId: string): Promise<Problem | null>;
-  listTestcases(eventId: string, problemId: string, version: string): Promise<Testcase[]>;
+  listTestcases(eventId: string, problemId: string): Promise<Testcase[]>;
   createAcceptedSubmission(input: {
     submission: Omit<Submission, "id" | "createdAt">;
     cases: Omit<SubmissionCase, "submissionId">[];
@@ -48,14 +48,6 @@ export interface JudgeAdminRepository {
   }): Promise<{ team: Team; adminMembership: TeamMember }>;
   createTeamMember(input: TeamMember): Promise<TeamMember>;
   createProblem(input: Problem): Promise<Problem>;
-  createTestcaseVersion(input: {
-    eventId: string;
-    problemId: string;
-    version: string;
-    cases: Array<Omit<Testcase, "id" | "eventId" | "problemId" | "version" | "createdAt">>;
-    createdAt: Date;
-    setCurrent: boolean;
-  }): Promise<Testcase[]>;
   createCliToken(input: {
     userId: string;
     teamId: string;
@@ -106,12 +98,11 @@ export class FirestoreJudgeRepository implements JudgeRepository {
     return snapshot.exists ? toProblem(snapshot as QueryDocumentSnapshot) : null;
   }
 
-  async listTestcases(eventId: string, problemId: string, version: string): Promise<Testcase[]> {
+  async listTestcases(eventId: string, problemId: string): Promise<Testcase[]> {
     const snapshot = await this.db
       .collection("testcases")
       .where("eventId", "==", eventId)
       .where("problemId", "==", problemId)
-      .where("version", "==", version)
       .orderBy("orderIndex", "asc")
       .get();
 
@@ -167,11 +158,10 @@ export class FirestoreJudgeRepository implements JudgeRepository {
         if (
           !testcase ||
           testcase.eventId !== submission.eventId ||
-          testcase.problemId !== submission.problemId ||
-          testcase.version !== submission.testcaseVersion
+          testcase.problemId !== submission.problemId
         ) {
           throw new Error(
-            "submissionCases.caseId must reference a testcase for the submission problem/version",
+            "submissionCases.caseId must reference a testcase for the submission problem",
           );
         }
       }
@@ -343,76 +333,6 @@ export class FirestoreJudgeAdminRepository
     return input;
   }
 
-  async createTestcaseVersion(input: {
-    eventId: string;
-    problemId: string;
-    version: string;
-    cases: Array<Omit<Testcase, "id" | "eventId" | "problemId" | "version" | "createdAt">>;
-    createdAt: Date;
-    setCurrent: boolean;
-  }): Promise<Testcase[]> {
-    const testcases: Testcase[] = input.cases.map((testcase) => ({
-      ...testcase,
-      id: newId(),
-      eventId: input.eventId,
-      problemId: input.problemId,
-      version: input.version,
-      createdAt: input.createdAt,
-    }));
-
-    await this.db.runTransaction(async (transaction) => {
-      const problemRef = this.db
-        .collection("problems")
-        .doc(problemDocumentId(input.eventId, input.problemId));
-      const [problemSnapshot, existingVersionSnapshot] = await Promise.all([
-        transaction.get(problemRef),
-        transaction.get(
-          this.db
-            .collection("testcases")
-            .where("eventId", "==", input.eventId)
-            .where("problemId", "==", input.problemId)
-            .where("version", "==", input.version)
-            .limit(1),
-        ),
-      ]);
-
-      assertExists(
-        problemSnapshot.exists,
-        `problems/${problemDocumentId(input.eventId, input.problemId)}`,
-      );
-      if (!existingVersionSnapshot.empty) {
-        throw new Error("testcase version already exists for this problem");
-      }
-
-      for (const testcase of testcases) {
-        const uniqueOrderRef = this.db
-          .collection("_unique")
-          .doc(
-            testcaseOrderUniqueId(
-              testcase.eventId,
-              testcase.problemId,
-              testcase.version,
-              testcase.orderIndex,
-            ),
-          );
-        transaction.create(uniqueOrderRef, { testcaseId: testcase.id });
-        transaction.create(this.db.collection("testcases").doc(testcase.id), {
-          ...testcase,
-          createdAt: Timestamp.fromDate(testcase.createdAt),
-        });
-      }
-
-      if (input.setCurrent) {
-        transaction.update(problemRef, {
-          testcaseVersion: input.version,
-          updatedAt: Timestamp.fromDate(input.createdAt),
-        });
-      }
-    });
-
-    return testcases;
-  }
-
   async createCliToken(input: {
     userId: string;
     teamId: string;
@@ -539,13 +459,9 @@ function toProblem(doc: QueryDocumentSnapshot): Problem {
     id: readString(data, "id"),
     title: readString(data, "title"),
     statement: readString(data, "statement"),
-    constraints: readString(data, "constraints"),
-    inputFormat: readString(data, "inputFormat"),
-    outputFormat: readString(data, "outputFormat"),
-    allowedLanguages: readStringArray(data, "allowedLanguages"),
+    solutionCode: readNullableString(data, "solutionCode") ?? "",
     timeLimitMs: readNumber(data, "timeLimitMs"),
     compareMode: compareMode as CompareMode,
-    testcaseVersion: readString(data, "testcaseVersion"),
     isPublished: readBoolean(data, "isPublished"),
     createdAt: readDate(data, "createdAt"),
     updatedAt: readDate(data, "updatedAt"),
@@ -563,7 +479,6 @@ function toTestcase(doc: QueryDocumentSnapshot): Testcase {
     id: doc.id,
     eventId: readString(data, "eventId"),
     problemId: readString(data, "problemId"),
-    version: readString(data, "version"),
     type: type as TestcaseType,
     input: readString(data, "input"),
     expectedOutput: readString(data, "expectedOutput"),
@@ -599,14 +514,6 @@ function readNullableString(data: DocumentData, key: string): string | null {
   }
   if (typeof value !== "string") {
     throw new Error(`Firestore field ${key} must be a string or null`);
-  }
-  return value;
-}
-
-function readStringArray(data: DocumentData, key: string): string[] {
-  const value = data[key];
-  if (!Array.isArray(value) || value.some((item) => typeof item !== "string")) {
-    throw new Error(`Firestore field ${key} must be a string array`);
   }
   return value;
 }
@@ -672,15 +579,6 @@ function solveDocumentId(teamId: string, eventId: string, problemId: string): st
 
 function submissionCaseDocumentId(submissionId: string, caseId: string): string {
   return encodeCompositeId([submissionId, caseId]);
-}
-
-function testcaseOrderUniqueId(
-  eventId: string,
-  problemId: string,
-  version: string,
-  orderIndex: number,
-): string {
-  return `testcases:${encodeCompositeId([eventId, problemId, version, String(orderIndex)])}`;
 }
 
 function cliTokenHashUniqueId(tokenHash: string): string {

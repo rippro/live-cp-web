@@ -47,13 +47,9 @@ export interface Problem {
   id: string;
   title: string;
   statement: string;
-  constraints: string;
-  inputFormat: string;
-  outputFormat: string;
-  allowedLanguages: string[];
+  solutionCode: string;
   timeLimitMs: number;
   compareMode: CompareMode;
-  testcaseVersion: string;
   isPublished: boolean;
   createdAt: Date;
   updatedAt: Date;
@@ -63,7 +59,6 @@ export interface Testcase {
   id: string;
   eventId: string;
   problemId: string;
-  version: string;
   type: TestcaseType;
   input: string;
   expectedOutput: string;
@@ -78,9 +73,7 @@ export interface Submission {
   teamId: string;
   eventId: string;
   problemId: string;
-  language: string;
   sourceHash: string;
-  testcaseVersion: string;
   status: "AC";
   maxTimeMs: number;
   createdAt: Date;
@@ -111,13 +104,8 @@ export interface ProblemConfigResponse {
   id: string;
   title: string;
   statement: string;
-  constraints: string;
-  inputFormat: string;
-  outputFormat: string;
-  allowedLanguages: string[];
   timeLimitMs: number;
   compareMode: CompareMode;
-  testcaseVersion: string;
 }
 
 export interface TestcaseResponse {
@@ -136,9 +124,7 @@ export interface AcSubmissionCaseInput {
 }
 
 export interface AcSubmissionInput {
-  language: string;
   sourceHash: string;
-  testcaseVersion: string;
   status: JudgeStatus;
   maxTimeMs: number;
   cases: AcSubmissionCaseInput[];

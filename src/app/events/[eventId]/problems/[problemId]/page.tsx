@@ -2,6 +2,7 @@ import { notFound } from "next/navigation";
 import { getAdminFirestore } from "@/lib/firebase/admin";
 import { getSession } from "@/lib/auth/session";
 import { Timestamp } from "firebase-admin/firestore";
+import { MarkdownView } from "@/components/problems/MarkdownView";
 
 interface PageProps {
   params: Promise<{ eventId: string; problemId: string }>;
@@ -29,12 +30,7 @@ async function getProblemWithTestcases(eventId: string, problemId: string, showA
       id: d.id as string,
       title: d.title as string,
       statement: d.statement as string,
-      constraints: d.constraints as string,
-      inputFormat: d.inputFormat as string,
-      outputFormat: d.outputFormat as string,
-      allowedLanguages: d.allowedLanguages as string[],
       timeLimitMs: d.timeLimitMs as number,
-      testcaseVersion: d.testcaseVersion as string,
       isPublished: d.isPublished as boolean,
       updatedAt: (d.updatedAt as Timestamp).toDate().toISOString(),
       samples: testcasesSnap.docs.map((t) => ({
@@ -73,45 +69,17 @@ export default async function ProblemPage({ params }: PageProps) {
               DRAFT
             </span>
           )}
-          <span className="font-mono text-xs text-rp-muted">v{problem.testcaseVersion}</span>
         </div>
         <h1 className="text-3xl font-extrabold tracking-tight text-rp-100 mb-4">{problem.title}</h1>
         <div className="flex flex-wrap items-center gap-x-6 gap-y-1 text-xs text-rp-muted">
           <span>制限時間: <span className="text-rp-300 font-mono">{problem.timeLimitMs}ms</span></span>
-          <span>言語: <span className="text-rp-300 font-mono">{problem.allowedLanguages.join(", ")}</span></span>
         </div>
       </div>
 
       <div className="space-y-8">
-        {/* 問題文 */}
         <section>
-          <h2 className="text-xs font-medium tracking-widest text-rp-muted uppercase mb-4">問題文</h2>
-          <div className="text-sm text-rp-100 leading-8 whitespace-pre-wrap">{problem.statement}</div>
+          <MarkdownView source={problem.statement} />
         </section>
-
-        {/* 制約 */}
-        {problem.constraints && (
-          <section className="border-t border-rp-border pt-6">
-            <h2 className="text-xs font-medium tracking-widest text-rp-muted uppercase mb-4">制約</h2>
-            <div className="text-sm text-rp-100 leading-7 whitespace-pre-wrap font-mono bg-rp-800 rounded-lg border border-rp-border p-4">{problem.constraints}</div>
-          </section>
-        )}
-
-        {/* 入出力形式 */}
-        <div className="grid gap-4 md:grid-cols-2 border-t border-rp-border pt-6">
-          {problem.inputFormat && (
-            <section>
-              <h2 className="text-xs font-medium tracking-widest text-rp-muted uppercase mb-3">入力</h2>
-              <pre className="text-xs text-rp-100 font-mono whitespace-pre-wrap leading-6 bg-rp-800 rounded-lg border border-rp-border p-4">{problem.inputFormat}</pre>
-            </section>
-          )}
-          {problem.outputFormat && (
-            <section>
-              <h2 className="text-xs font-medium tracking-widest text-rp-muted uppercase mb-3">出力</h2>
-              <pre className="text-xs text-rp-100 font-mono whitespace-pre-wrap leading-6 bg-rp-800 rounded-lg border border-rp-border p-4">{problem.outputFormat}</pre>
-            </section>
-          )}
-        </div>
 
         {/* サンプル */}
         {problem.samples.length > 0 && (

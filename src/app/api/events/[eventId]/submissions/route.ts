@@ -31,7 +31,6 @@ export async function GET(
       teamId: d.teamId,
       eventId: d.eventId,
       problemId: d.problemId,
-      language: d.language,
       status: d.status,
       maxTimeMs: d.maxTimeMs,
       createdAt: (d.createdAt as Timestamp).toDate().toISOString(),
