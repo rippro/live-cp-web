@@ -2,6 +2,8 @@
 
 import { createContext, useCallback, useContext, useEffect, useState, type ReactNode } from "react";
 import type { Session } from "@/lib/auth/types";
+import { getSessionDisplayName } from "@/lib/auth/types";
+import { addRecentAccount } from "@/lib/auth/recent-accounts";
 
 interface AuthContextType {
   session: Session | null;
@@ -24,8 +26,16 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const refresh = useCallback(async () => {
     try {
       const res = await fetch("/api/auth/me");
-      const data = (await res.json()) as { session: Session | null };
+      const data = (await res.json()) as { session: Session | null; token: string | null };
       setSession(data.session);
+      if (data.session && data.token) {
+        addRecentAccount({
+          id: data.session.role === "solver" ? data.session.userId : data.session.uid,
+          role: data.session.role,
+          displayName: getSessionDisplayName(data.session),
+          token: data.token,
+        });
+      }
     } catch {
       setSession(null);
     } finally {

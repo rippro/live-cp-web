@@ -8,15 +8,17 @@ import { getClientAuth } from "@/lib/auth/firebase-client";
 interface LoginModalProps {
   open: boolean;
   onClose: () => void;
+  initialTab?: "google" | "solver-login" | "solver-signup" | undefined;
+  initialUserId?: string | undefined;
 }
 
 type AuthTab = "google" | "solver-login" | "solver-signup";
 type IdStatus = "idle" | "checking" | "available" | "taken" | "invalid";
 
-export function LoginModal({ open, onClose }: LoginModalProps) {
+export function LoginModal({ open, onClose, initialTab, initialUserId }: LoginModalProps) {
   const { refresh } = useAuth();
-  const [tab, setTab] = useState<AuthTab>("google");
-  const [userId, setUserId] = useState("");
+  const [tab, setTab] = useState<AuthTab>(initialTab ?? "google");
+  const [userId, setUserId] = useState(initialUserId ?? "");
   const [password, setPassword] = useState("");
   const [confirmPassword, setConfirmPassword] = useState("");
   const [error, setError] = useState("");
@@ -24,6 +26,12 @@ export function LoginModal({ open, onClose }: LoginModalProps) {
   const [idStatus, setIdStatus] = useState<IdStatus>("idle");
   const checkTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const dialogRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    if (!open) return;
+    if (initialTab) setTab(initialTab);
+    if (initialUserId !== undefined) setUserId(initialUserId);
+  }, [open, initialTab, initialUserId]);
 
   useEffect(() => {
     if (!open) return;
