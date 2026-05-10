@@ -6,6 +6,50 @@ import { Timestamp } from "firebase-admin/firestore";
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
 
+export async function POST(request: Request) {
+  const session = await getSession();
+  if (!session || session.role !== "admin") {
+    return NextResponse.json({ error: "Forbidden" }, { status: 403 });
+  }
+
+  const body = (await request.json()) as Record<string, unknown>;
+  const eventId = String(body.eventId ?? "").trim();
+  if (!eventId) return NextResponse.json({ error: "eventId required" }, { status: 400 });
+  if (!body.startsAt || !body.endsAt) return NextResponse.json({ error: "startsAt/endsAt required" }, { status: 400 });
+
+  const db = getAdminFirestore();
+  const ref = db.collection("events").doc(eventId);
+  if ((await ref.get()).exists) return NextResponse.json({ error: "Event already exists" }, { status: 409 });
+
+  const data = {
+    isActive: Boolean(body.isActive ?? false),
+    startsAt: Timestamp.fromDate(new Date(body.startsAt as string)),
+    endsAt: Timestamp.fromDate(new Date(body.endsAt as string)),
+  };
+  await ref.set(data);
+  return NextResponse.json({
+    id: eventId,
+    isActive: data.isActive,
+    startsAt: data.startsAt.toDate().toISOString(),
+    endsAt: data.endsAt.toDate().toISOString(),
+  }, { status: 201 });
+}
+
+export async function DELETE(request: Request) {
+  const session = await getSession();
+  if (!session || session.role !== "admin") {
+    return NextResponse.json({ error: "Forbidden" }, { status: 403 });
+  }
+
+  const body = (await request.json()) as Record<string, unknown>;
+  const eventId = String(body.eventId ?? "").trim();
+  if (!eventId) return NextResponse.json({ error: "eventId required" }, { status: 400 });
+
+  const db = getAdminFirestore();
+  await db.collection("events").doc(eventId).delete();
+  return NextResponse.json({ ok: true });
+}
+
 export async function PATCH(request: Request) {
   const session = await getSession();
   if (!session || session.role !== "admin") {

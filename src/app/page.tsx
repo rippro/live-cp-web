@@ -14,10 +14,6 @@ export default function Home() {
           </div>
           <div className="relative mx-auto max-w-7xl px-6 py-28">
             <div className="max-w-3xl">
-              <div className="mb-6 inline-flex items-center gap-2 rounded-full border border-rp-border bg-rp-800/60 px-3 py-1.5">
-                <span className="h-1.5 w-1.5 rounded-full bg-rp-success animate-pulse" />
-                <span className="text-xs font-mono text-rp-muted">v1 · ローカル実行型</span>
-              </div>
               <h1 className="font-display text-5xl font-extrabold tracking-tight text-rp-100 sm:text-6xl lg:text-7xl mb-6 leading-none">
                 RipPro
                 <span className="text-rp-400"> Judge</span>
