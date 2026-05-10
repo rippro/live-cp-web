@@ -7,15 +7,13 @@ export const revalidate = 60;
 async function getEvents() {
   try {
     const { getAdminFirestore } = await import("@/lib/firebase/admin");
-    const { Timestamp } = await import("firebase-admin/firestore");
     const db = getAdminFirestore();
-    const snap = await db.collection("events").orderBy("startsAt", "desc").get();
+    const snap = await db.collection("events").get();
     return snap.docs.map((doc) => {
       const d = doc.data();
       return {
         id: doc.id,
         isActive: d.isActive as boolean,
-        startsAt: (d.startsAt as InstanceType<typeof Timestamp>).toDate().toISOString(),
       };
     });
   } catch {
@@ -45,12 +43,6 @@ export default async function EventsPage() {
           ) : (
             <div className="divide-y divide-rp-border">
               {events.map((event) => {
-                const start = new Date(event.startsAt);
-                const now = new Date();
-                const started = now >= start;
-                const isLive = event.isActive && started;
-                const statusLabel = event.isActive ? (started ? "LIVE" : "UPCOMING") : "DRAFT";
-
                 return (
                   <Link
                     key={event.id}
@@ -60,25 +52,20 @@ export default async function EventsPage() {
                     <div className="flex items-center gap-5">
                       <div
                         className={`w-2 h-2 rounded-full flex-shrink-0 ${
-                          isLive ? "bg-rp-accent" : "bg-rp-600"
+                          event.isActive ? "bg-rp-accent" : "bg-rp-600"
                         }`}
                       />
-                      <div>
-                        <h2 className="text-base font-semibold text-rp-100 group-hover:text-rp-400 transition-colors mb-1">
-                          {event.id}
-                        </h2>
-                        <div className="flex items-center gap-4 text-xs text-rp-muted font-mono">
-                          <span>開始 {start.toLocaleDateString("ja-JP")}</span>
-                        </div>
-                      </div>
+                      <h2 className="text-base font-semibold text-rp-100 group-hover:text-rp-400 transition-colors">
+                        {event.id}
+                      </h2>
                     </div>
                     <div className="flex items-center gap-4">
                       <span
                         className={`text-[11px] font-medium px-2.5 py-1 rounded-full ${
-                          isLive ? "badge-live" : "badge-inactive"
+                          event.isActive ? "badge-live" : "badge-inactive"
                         }`}
                       >
-                        {statusLabel}
+                        {event.isActive ? "LIVE" : "DRAFT"}
                       </span>
                       <ArrowRight
                         aria-hidden="true"

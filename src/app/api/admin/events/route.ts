@@ -1,4 +1,3 @@
-import { Timestamp } from "firebase-admin/firestore";
 import { NextResponse } from "next/server";
 import { getSession } from "@/lib/auth/session";
 import { getAdminFirestore } from "@/lib/firebase/admin";
@@ -15,10 +14,6 @@ export async function POST(request: Request) {
   const body = (await request.json()) as Record<string, unknown>;
   const eventId = String(body.eventId ?? "").trim();
   if (!eventId) return NextResponse.json({ error: "eventId required" }, { status: 400 });
-  if (!body.startsAt) return NextResponse.json({ error: "startsAt required" }, { status: 400 });
-  const startsAt = new Date(body.startsAt as string);
-  if (Number.isNaN(startsAt.getTime()))
-    return NextResponse.json({ error: "startsAt invalid" }, { status: 400 });
 
   const db = getAdminFirestore();
   const ref = db.collection("events").doc(eventId);
@@ -27,17 +22,9 @@ export async function POST(request: Request) {
 
   const data = {
     isActive: Boolean(body.isActive ?? false),
-    startsAt: Timestamp.fromDate(startsAt),
   };
   await ref.set(data);
-  return NextResponse.json(
-    {
-      id: eventId,
-      isActive: data.isActive,
-      startsAt: data.startsAt.toDate().toISOString(),
-    },
-    { status: 201 },
-  );
+  return NextResponse.json({ id: eventId, isActive: data.isActive }, { status: 201 });
 }
 
 async function batchDelete(db: ReturnType<typeof getAdminFirestore>, refs: FirebaseFirestore.DocumentReference[]) {
@@ -131,20 +118,10 @@ export async function PATCH(request: Request) {
 
   const updates: Record<string, unknown> = {};
   if (body.isActive !== undefined) updates.isActive = Boolean(body.isActive);
-  if (body.startsAt !== undefined) {
-    const startsAt = new Date(body.startsAt as string);
-    if (Number.isNaN(startsAt.getTime()))
-      return NextResponse.json({ error: "startsAt invalid" }, { status: 400 });
-    updates.startsAt = Timestamp.fromDate(startsAt);
-  }
 
   await ref.update(updates);
   const updated = await ref.get();
   const d = updated.data();
   if (!d) return NextResponse.json({ error: "Not found" }, { status: 404 });
-  return NextResponse.json({
-    id: eventId,
-    isActive: d.isActive,
-    startsAt: (d.startsAt as Timestamp).toDate().toISOString(),
-  });
+  return NextResponse.json({ id: eventId, isActive: d.isActive as boolean });
 }

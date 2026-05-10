@@ -9,6 +9,13 @@ interface PageProps {
   params: Promise<{ eventId: string }>;
 }
 
+async function getEventIsActive(eventId: string): Promise<boolean> {
+  const db = getAdminFirestore();
+  const snap = await db.collection("events").doc(eventId).get();
+  if (!snap.exists) return false;
+  return Boolean(snap.data()?.isActive);
+}
+
 async function getProblems(eventId: string) {
   const db = getAdminFirestore();
   const query = db
@@ -48,6 +55,24 @@ async function getSolveCountByProblem(eventId: string) {
 export default async function ProblemsPage({ params }: PageProps) {
   const { eventId: _rawEventId } = await params;
   const eventId = decodeURIComponent(_rawEventId);
+
+  const isActive = await getEventIsActive(eventId).catch(() => false);
+
+  if (!isActive) {
+    return (
+      <div className="mx-auto max-w-7xl px-6 py-10">
+        <div className="mb-8 pb-6 border-b border-rp-border">
+          <p className="text-xs font-medium tracking-widest text-rp-muted uppercase mb-1">
+            Problems
+          </p>
+          <h1 className="text-2xl font-extrabold tracking-tight text-rp-100">問題一覧</h1>
+        </div>
+        <div className="py-20 text-center">
+          <p className="text-rp-muted text-sm">待機中</p>
+        </div>
+      </div>
+    );
+  }
 
   const [problems, solves] = await Promise.all([
     getProblems(eventId).catch((error: unknown) => {

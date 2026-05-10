@@ -9,8 +9,6 @@ import { useAuth } from "@/contexts/AuthContext";
 
 function EventForm({ onCreated }: { onCreated: (e: Event) => void }) {
   const [id, setId] = useState("");
-  const [startDate, setStartDate] = useState("");
-  const [startTime, setStartTime] = useState("10:00");
   const [isActive, setIsActive] = useState(false);
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -18,17 +16,12 @@ function EventForm({ onCreated }: { onCreated: (e: Event) => void }) {
   async function submit(ev: React.FormEvent) {
     ev.preventDefault();
     setError(null);
-    const startsAt = new Date(`${startDate}T${startTime}`);
-    if (Number.isNaN(startsAt.getTime())) {
-      setError("開始日時を入力してください");
-      return;
-    }
     setSaving(true);
     try {
       const r = await fetch("/api/admin/events", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ eventId: id, startsAt: startsAt.toISOString(), isActive }),
+        body: JSON.stringify({ eventId: id, isActive }),
       });
       const data = (await r.json()) as Event & { error?: string };
       if (!r.ok) {
@@ -37,8 +30,6 @@ function EventForm({ onCreated }: { onCreated: (e: Event) => void }) {
       }
       onCreated(data);
       setId("");
-      setStartDate("");
-      setStartTime("10:00");
       setIsActive(false);
     } finally {
       setSaving(false);
@@ -48,47 +39,18 @@ function EventForm({ onCreated }: { onCreated: (e: Event) => void }) {
   return (
     <form onSubmit={submit} className="card-surface p-5 space-y-4">
       <h3 className="font-display text-sm font-semibold text-rp-100">新規イベント作成</h3>
-      <div className="grid grid-cols-1 sm:grid-cols-[minmax(0,1.2fr)_minmax(0,1fr)_8rem] gap-3">
-        <div>
-          <label htmlFor="event-id" className="block text-xs text-rp-muted mb-1">
-            Event ID
-          </label>
-          <input
-            id="event-id"
-            required
-            value={id}
-            onChange={(e) => setId(e.target.value)}
-            placeholder="e.g. contest-2025-01"
-            className="input-field w-full text-sm"
-          />
-        </div>
-        <div>
-          <label htmlFor="event-start-date" className="block text-xs text-rp-muted mb-1">
-            開始日
-          </label>
-          <input
-            id="event-start-date"
-            required
-            type="date"
-            value={startDate}
-            onChange={(e) => setStartDate(e.target.value)}
-            className="input-field w-full text-sm"
-          />
-        </div>
-        <div>
-          <label htmlFor="event-start-time" className="block text-xs text-rp-muted mb-1">
-            開始時刻
-          </label>
-          <input
-            id="event-start-time"
-            required
-            type="time"
-            step="300"
-            value={startTime}
-            onChange={(e) => setStartTime(e.target.value)}
-            className="input-field w-full text-sm"
-          />
-        </div>
+      <div>
+        <label htmlFor="event-id" className="block text-xs text-rp-muted mb-1">
+          Event ID
+        </label>
+        <input
+          id="event-id"
+          required
+          value={id}
+          onChange={(e) => setId(e.target.value)}
+          placeholder="e.g. contest-2025-01"
+          className="input-field w-full text-sm"
+        />
       </div>
       <div className="flex items-center gap-3">
         <label className="flex items-center gap-2 cursor-pointer select-none text-sm text-rp-muted">
@@ -199,7 +161,6 @@ interface User {
 interface Event {
   id: string;
   isActive: boolean;
-  startsAt: string;
   problemCount?: number;
   teamCount?: number;
 }
@@ -382,27 +343,21 @@ export default function AdminPage() {
               </div>
               <EventForm onCreated={(e) => setEvents((es) => [e, ...es])} />
               {events.map((e) => {
-                const now = new Date();
-                const started = now >= new Date(e.startsAt);
-                const statusLabel = e.isActive ? (started ? "LIVE" : "UPCOMING") : "DRAFT";
                 return (
                   <div key={e.id} className="card-surface flex items-center gap-4 px-5 py-4">
                     <div className="flex-1 min-w-0">
-                      <div className="flex items-center gap-2 mb-0.5">
+                      <div className="flex items-center gap-2">
                         <span className="font-display text-sm font-semibold text-rp-100">
                           {e.id}
                         </span>
                         <span
                           className={`text-[10px] font-mono px-1.5 py-0.5 rounded-full border ${
-                            statusLabel === "LIVE" ? "badge-live" : "text-rp-muted border-rp-border"
+                            e.isActive ? "badge-live" : "text-rp-muted border-rp-border"
                           }`}
                         >
-                          {statusLabel}
+                          {e.isActive ? "LIVE" : "DRAFT"}
                         </span>
                       </div>
-                      <p className="font-mono text-xs text-rp-muted">
-                        開始 {new Date(e.startsAt).toLocaleString("ja-JP")}
-                      </p>
                     </div>
                     <div className="flex gap-2 items-center">
                       <button

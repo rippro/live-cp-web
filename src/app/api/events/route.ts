@@ -1,4 +1,3 @@
-import type { Timestamp } from "firebase-admin/firestore";
 import { NextResponse } from "next/server";
 import { getAdminFirestore } from "@/lib/firebase/admin";
 
@@ -7,13 +6,12 @@ export const dynamic = "force-dynamic";
 
 export async function GET() {
   const db = getAdminFirestore();
-  const snap = await db.collection("events").orderBy("startsAt", "desc").get();
+  const snap = await db.collection("events").get();
   const events = snap.docs.map((doc) => {
     const d = doc.data();
     return {
       id: doc.id,
       isActive: d.isActive as boolean,
-      startsAt: (d.startsAt as Timestamp).toDate().toISOString(),
     };
   });
   return NextResponse.json({ events });

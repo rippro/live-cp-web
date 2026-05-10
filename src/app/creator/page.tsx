@@ -556,6 +556,19 @@ export default function CreatorPage() {
       });
   }, [selectedEvent]);
 
+  async function togglePublish(problemId: string, current: boolean) {
+    const res = await fetch(`/api/events/${selectedEvent}/problems/${problemId}`, {
+      method: "PATCH",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ isPublished: !current }),
+    });
+    if (res.ok) {
+      setProblems((ps) =>
+        ps.map((p) => (p.id === problemId ? { ...p, isPublished: !current } : p)),
+      );
+    }
+  }
+
   async function deleteProblem(problemId: string) {
     await fetch(`/api/events/${selectedEvent}/problems/${problemId}`, { method: "DELETE" });
     setProblems((ps) => ps.filter((p) => p.id !== problemId));
@@ -742,16 +755,17 @@ export default function CreatorPage() {
                       <span className="min-w-0 flex-1 truncate font-display text-sm font-semibold text-rp-100">
                         {p.title}
                       </span>
-                      {!p.isPublished && (
-                        <span className="shrink-0 text-[10px] font-mono px-1.5 py-0.5 rounded border border-rp-muted/30 text-rp-muted">
-                          DRAFT
-                        </span>
-                      )}
-                      {p.isPublished && (
-                        <span className="shrink-0 text-[10px] font-mono px-1.5 py-0.5 rounded badge-live">
-                          LIVE
-                        </span>
-                      )}
+                      <button
+                        type="button"
+                        onClick={() => void togglePublish(p.id, p.isPublished)}
+                        className={`shrink-0 text-[10px] font-mono px-1.5 py-0.5 rounded border cursor-pointer transition-opacity hover:opacity-70 ${
+                          p.isPublished
+                            ? "badge-live"
+                            : "border-rp-muted/30 text-rp-muted"
+                        }`}
+                      >
+                        {p.isPublished ? "LIVE" : "DRAFT"}
+                      </button>
                     </div>
                     <p className="font-mono text-xs text-rp-muted mt-0.5">
                       更新: {new Date(p.updatedAt).toLocaleDateString("ja-JP")}
