@@ -1,9 +1,27 @@
 "use client";
 
 import { collection, getDocs, query, type Timestamp, where } from "firebase/firestore";
-import { Eye, FilePlus2, Pencil, Plus, Save, Trash2, Upload, X } from "lucide-react";
+import {
+  Columns2,
+  Eye,
+  FilePlus2,
+  FileText,
+  Pencil,
+  Plus,
+  Save,
+  Trash2,
+  Upload,
+  X,
+} from "lucide-react";
 import { useRouter } from "next/navigation";
-import { useCallback, useEffect, useRef, useState } from "react";
+import {
+  type ComponentType,
+  type FormEvent,
+  useCallback,
+  useEffect,
+  useRef,
+  useState,
+} from "react";
 import { createPortal } from "react-dom";
 import { GlobalNav } from "@/components/nav/GlobalNav";
 import { MarkdownView } from "@/components/problems/MarkdownView";
@@ -36,6 +54,18 @@ interface Event {
   id: string;
   isActive: boolean;
 }
+
+type StatementViewMode = "plain" | "both" | "preview";
+
+const statementViewOptions: {
+  value: StatementViewMode;
+  label: string;
+  icon: ComponentType<{ "aria-hidden": true; size: number }>;
+}[] = [
+  { value: "plain", label: "Plain text editor", icon: FileText },
+  { value: "both", label: "Both", icon: Columns2 },
+  { value: "preview", label: "Preview", icon: Eye },
+];
 
 function makeClientId() {
   return crypto.randomUUID();
@@ -74,10 +104,15 @@ function ProblemForm({
   );
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState("");
+  const [statementViewMode, setStatementViewMode] = useState<StatementViewMode>("plain");
   const isEdit = Boolean(initial?.id);
 
-  async function submit(e: React.FormEvent) {
+  async function submit(e: FormEvent) {
     e.preventDefault();
+    if (!form.statement.trim()) {
+      setError("問題文 Markdown を入力してください");
+      return;
+    }
     setSaving(true);
     setError("");
     try {
@@ -134,20 +169,60 @@ function ProblemForm({
         />
       </div>
       <div>
-        <label htmlFor="problem-statement" className="block text-xs text-rp-muted mb-1.5">
-          問題文 Markdown
-          <span className="ml-2 text-rp-500">（サンプル入出力は問題文内に記述）</span>
-        </label>
-        <textarea
-          id="problem-statement"
-          className="input-field min-h-[220px] resize-y font-mono"
-          value={form.statement}
-          onChange={(e) => setForm((f) => ({ ...f, statement: e.target.value }))}
-          placeholder={
-            "# 問題文\n\n$1 \\le N \\le 10^5$\n\n## サンプル入力 1\n```\n1 2\n```\n\n## サンプル出力 1\n```\n3\n```"
-          }
-          required
-        />
+        <div className="mb-2 flex flex-col gap-2 sm:flex-row sm:items-end sm:justify-between">
+          <label htmlFor="problem-statement" className="block text-xs text-rp-muted">
+            問題文 Markdown
+            <span className="ml-2 text-rp-500">（サンプル入出力は問題文内に記述）</span>
+          </label>
+          <fieldset
+            className="inline-flex w-fit overflow-hidden rounded-md border border-rp-border bg-rp-900"
+            aria-label="問題文 Markdown の表示切替"
+          >
+            {statementViewOptions.map((option) => {
+              const Icon = option.icon;
+              const active = statementViewMode === option.value;
+              return (
+                <button
+                  key={option.value}
+                  type="button"
+                  onClick={() => setStatementViewMode(option.value)}
+                  className={`inline-flex h-8 items-center gap-1.5 border-r border-rp-border px-2.5 text-xs transition-colors last:border-r-0 ${
+                    active
+                      ? "bg-rp-400 text-white"
+                      : "bg-transparent text-rp-300 hover:bg-rp-800 hover:text-rp-100"
+                  }`}
+                  aria-pressed={active}
+                >
+                  <Icon aria-hidden={true} size={13} />
+                  {option.label}
+                </button>
+              );
+            })}
+          </fieldset>
+        </div>
+        <div className={statementViewMode === "both" ? "grid gap-4 lg:grid-cols-2" : undefined}>
+          {(statementViewMode === "plain" || statementViewMode === "both") && (
+            <textarea
+              id="problem-statement"
+              className="input-field min-h-[220px] resize-y font-mono"
+              value={form.statement}
+              onChange={(e) => setForm((f) => ({ ...f, statement: e.target.value }))}
+              placeholder={
+                "# 問題文\n\n$1 \\le N \\le 10^5$\n\n## サンプル入力 1\n```\n1 2\n```\n\n## サンプル出力 1\n```\n3\n```"
+              }
+              required
+            />
+          )}
+          {(statementViewMode === "preview" || statementViewMode === "both") && (
+            <div className="min-h-[220px] overflow-x-auto rounded-md border border-rp-border bg-rp-900 p-4">
+              {form.statement.trim() ? (
+                <MarkdownView source={form.statement} />
+              ) : (
+                <p className="text-sm text-rp-muted">プレビューする Markdown がありません。</p>
+              )}
+            </div>
+          )}
+        </div>
       </div>
       <div>
         <label htmlFor="solution-code" className="block text-xs text-rp-muted mb-1.5">
