@@ -1,11 +1,13 @@
 "use client";
 
+import { collection, getDocs } from "firebase/firestore";
 import { Eye, Pencil, Plus, Settings, Trash2, UserPlus, X } from "lucide-react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
 import { GlobalNav } from "@/components/nav/GlobalNav";
 import { useAuth } from "@/contexts/AuthContext";
+import { getClientFirestore } from "@/lib/auth/firebase-client";
 
 function EventForm({ onCreated }: { onCreated: (e: Event) => void }) {
   const [id, setId] = useState("");
@@ -230,21 +232,32 @@ export default function AdminPage() {
       .then((d) => setUsers(d.users ?? []))
       .catch(() => {});
 
-    fetch("/api/events")
-      .then((r) => r.json() as Promise<{ events: Event[] }>)
-      .then((d) => {
-        setEvents(d.events ?? []);
-        // Fetch problems for all events
-        return Promise.all(
-          (d.events ?? []).map((ev) =>
-            fetch(`/api/events/${ev.id}/problems`)
-              .then((r) => r.json() as Promise<{ problems: Problem[] }>)
-              .then((pd) => pd.problems ?? [])
-              .catch(() => [] as Problem[]),
-          ),
+    const db = getClientFirestore();
+    Promise.all([getDocs(collection(db, "events")), getDocs(collection(db, "problems"))])
+      .then(([eventsSnap, problemsSnap]) => {
+        setEvents(
+          eventsSnap.docs
+            .map((eventDoc) => ({
+              id: eventDoc.id,
+              isActive: Boolean(eventDoc.data().isActive),
+            }))
+            .sort((a, b) => a.id.localeCompare(b.id)),
+        );
+        setAllProblems(
+          problemsSnap.docs
+            .map((problemDoc) => {
+              const d = problemDoc.data();
+              return {
+                eventId: String(d.eventId ?? ""),
+                id: String(d.id ?? problemDoc.id),
+                title: String(d.title ?? ""),
+                isPublished: Boolean(d.isPublished),
+                creatorUid: typeof d.creatorUid === "string" ? d.creatorUid : null,
+              };
+            })
+            .sort((a, b) => a.eventId.localeCompare(b.eventId) || a.id.localeCompare(b.id)),
         );
       })
-      .then((perEvent) => setAllProblems(perEvent.flat()))
       .catch(() => {});
   }, [loading, session]);
 

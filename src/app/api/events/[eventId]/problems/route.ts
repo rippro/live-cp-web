@@ -7,50 +7,6 @@ import { generateProblemId, newId } from "@/lib/judge/crypto";
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
 
-export async function GET(_request: Request, { params }: { params: Promise<{ eventId: string }> }) {
-  const { eventId: _rawEventId } = await params;
-  const eventId = decodeURIComponent(_rawEventId);
-  const session = await getSession();
-  const db = getAdminFirestore();
-
-  let query = db.collection("problems").where("eventId", "==", eventId);
-  if (!session || session.role === "solver") {
-    query = query.where("isPublished", "==", true) as typeof query;
-  }
-
-  try {
-    const snap = await query.orderBy("id", "asc").get();
-    const problems = snap.docs.map((doc) => {
-      const d = doc.data();
-      return {
-        eventId: d.eventId,
-        id: d.id,
-        title: d.title,
-        statement: d.statement,
-        solutionCode: d.solutionCode ?? "",
-        timeLimitMs: d.timeLimitMs,
-        points: d.points ?? 100,
-        compareMode: d.compareMode,
-        isPublished: d.isPublished,
-        creatorUid: d.creatorUid ?? null,
-        createdAt: (d.createdAt as Timestamp).toDate().toISOString(),
-        updatedAt: (d.updatedAt as Timestamp).toDate().toISOString(),
-      };
-    });
-
-    return NextResponse.json({ problems });
-  } catch (error) {
-    console.error("Failed to list problems", error);
-    return NextResponse.json(
-      {
-        error: "Failed to list problems",
-        detail: error instanceof Error ? error.message : String(error),
-      },
-      { status: 500 },
-    );
-  }
-}
-
 export async function POST(request: Request, { params }: { params: Promise<{ eventId: string }> }) {
   const { eventId: _rawEventId } = await params;
   const eventId = decodeURIComponent(_rawEventId);

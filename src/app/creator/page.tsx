@@ -1,12 +1,14 @@
 "use client";
 
+import { collection, getDocs, query, type Timestamp, where } from "firebase/firestore";
 import { Eye, FilePlus2, Pencil, Plus, Save, Trash2, Upload, X } from "lucide-react";
 import { useRouter } from "next/navigation";
-import { useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { createPortal } from "react-dom";
 import { GlobalNav } from "@/components/nav/GlobalNav";
 import { MarkdownView } from "@/components/problems/MarkdownView";
 import { useAuth } from "@/contexts/AuthContext";
+import { getClientFirestore } from "@/lib/auth/firebase-client";
 
 interface Problem {
   eventId: string;
@@ -37,6 +39,13 @@ interface Event {
 
 function makeClientId() {
   return crypto.randomUUID();
+}
+
+function timestampToIso(value: unknown): string {
+  if (value && typeof (value as Timestamp).toDate === "function") {
+    return (value as Timestamp).toDate().toISOString();
+  }
+  return new Date(0).toISOString();
 }
 
 function ProblemForm({
@@ -524,37 +533,56 @@ export default function CreatorPage() {
   }, [session, loading, router]);
 
   useEffect(() => {
-    fetch("/api/events")
-      .then((r) => r.json() as Promise<{ events: Event[] }>)
-      .then((d) => {
-        setEvents(d.events ?? []);
-        if (d.events?.[0]) setSelectedEvent(d.events[0].id);
+    const db = getClientFirestore();
+    getDocs(collection(db, "events"))
+      .then((snapshot) => {
+        const loadedEvents = snapshot.docs
+          .map((eventDoc) => ({
+            id: eventDoc.id,
+            isActive: Boolean(eventDoc.data().isActive),
+          }))
+          .sort((a, b) => a.id.localeCompare(b.id));
+        setEvents(loadedEvents);
+        if (loadedEvents[0]) setSelectedEvent(loadedEvents[0].id);
       })
       .catch(() => {});
   }, []);
 
-  function reloadProblems() {
+  const reloadProblems = useCallback(() => {
     if (!selectedEvent) return;
-    fetch(`/api/events/${selectedEvent}/problems`)
-      .then((r) => r.json() as Promise<{ problems: Problem[] }>)
-      .then((d) => setProblems(d.problems ?? []))
-      .catch(() => {});
-  }
-
-  useEffect(() => {
-    if (!selectedEvent) return;
-    fetch(`/api/events/${selectedEvent}/problems`)
-      .then(async (r) => {
-        const d = (await r.json()) as { problems?: Problem[]; error?: string; detail?: string };
-        if (!r.ok) throw new Error(d.detail ?? d.error ?? "問題の取得に失敗しました");
-        return d;
+    const db = getClientFirestore();
+    getDocs(query(collection(db, "problems"), where("eventId", "==", selectedEvent)))
+      .then((snapshot) => {
+        setProblems(
+          snapshot.docs
+            .map((problemDoc) => {
+              const d = problemDoc.data();
+              return {
+                eventId: String(d.eventId ?? selectedEvent),
+                id: String(d.id ?? problemDoc.id),
+                title: String(d.title ?? ""),
+                statement: String(d.statement ?? ""),
+                solutionCode: String(d.solutionCode ?? ""),
+                timeLimitMs: Number(d.timeLimitMs ?? 2000),
+                points: Number(d.points ?? 100),
+                testcases: [],
+                isPublished: Boolean(d.isPublished),
+                creatorUid: typeof d.creatorUid === "string" ? d.creatorUid : null,
+                updatedAt: timestampToIso(d.updatedAt),
+              };
+            })
+            .sort((a, b) => a.id.localeCompare(b.id)),
+        );
       })
-      .then((d) => setProblems(d.problems ?? []))
       .catch((error: unknown) => {
         console.error("Failed to load creator problems", error);
         setProblems([]);
       });
   }, [selectedEvent]);
+
+  useEffect(() => {
+    reloadProblems();
+  }, [reloadProblems]);
 
   async function togglePublish(problemId: string, current: boolean) {
     const res = await fetch(`/api/events/${selectedEvent}/problems/${problemId}`, {
@@ -759,9 +787,7 @@ export default function CreatorPage() {
                         type="button"
                         onClick={() => void togglePublish(p.id, p.isPublished)}
                         className={`shrink-0 text-[10px] font-mono px-1.5 py-0.5 rounded border cursor-pointer transition-opacity hover:opacity-70 ${
-                          p.isPublished
-                            ? "badge-live"
-                            : "border-rp-muted/30 text-rp-muted"
+                          p.isPublished ? "badge-live" : "border-rp-muted/30 text-rp-muted"
                         }`}
                       >
                         {p.isPublished ? "LIVE" : "DRAFT"}

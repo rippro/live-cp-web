@@ -6,53 +6,6 @@ import { getAdminFirestore } from "@/lib/firebase/admin";
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
 
-export async function GET(_req: Request, { params }: { params: Promise<{ eventId: string }> }) {
-  const { eventId: _rawEventId } = await params;
-  const eventId = decodeURIComponent(_rawEventId);
-  const session = await getSession();
-  if (!session) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-
-  const db = getAdminFirestore();
-  const [teamsSnap, solvesSnap, problemsSnap] = await Promise.all([
-    db.collection("teams").where("eventId", "==", eventId).get(),
-    db.collection("solves").where("eventId", "==", eventId).get(),
-    db.collection("problems").where("eventId", "==", eventId).get(),
-  ]);
-
-  const pointsByProblem = new Map<string, number>();
-  for (const doc of problemsSnap.docs) {
-    pointsByProblem.set(doc.data().id as string, (doc.data().points as number | undefined) ?? 100);
-  }
-
-  const solvesByTeam = new Map<string, { count: number; points: number }>();
-  for (const doc of solvesSnap.docs) {
-    const d = doc.data();
-    const tid = d.teamId as string;
-    const pid = d.problemId as string;
-    const prev = solvesByTeam.get(tid) ?? { count: 0, points: 0 };
-    solvesByTeam.set(tid, {
-      count: prev.count + 1,
-      points: prev.points + (pointsByProblem.get(pid) ?? 100),
-    });
-  }
-
-  const teams = teamsSnap.docs.map((doc) => {
-    const d = doc.data();
-    const s = solvesByTeam.get(doc.id) ?? { count: 0, points: 0 };
-    return {
-      id: doc.id,
-      eventId: d.eventId,
-      name: d.name,
-      createdAt: (d.createdAt as Timestamp).toDate().toISOString(),
-      solveCount: s.count,
-      totalPoints: s.points,
-    };
-  });
-
-  teams.sort((a, b) => b.totalPoints - a.totalPoints || a.name.localeCompare(b.name));
-  return NextResponse.json({ teams });
-}
-
 export async function POST(request: Request, { params }: { params: Promise<{ eventId: string }> }) {
   const { eventId: _rawEventId } = await params;
   const eventId = decodeURIComponent(_rawEventId);
