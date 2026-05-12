@@ -13,10 +13,12 @@ import {
   Upload,
   X,
 } from "lucide-react";
-import { useRouter } from "next/navigation";
+import Link from "next/link";
+import { useRouter, useSearchParams } from "next/navigation";
 import {
   type ComponentType,
   type FormEvent,
+  Suspense,
   useCallback,
   useEffect,
   useRef,
@@ -76,6 +78,22 @@ function timestampToIso(value: unknown): string {
     return (value as Timestamp).toDate().toISOString();
   }
   return new Date(0).toISOString();
+}
+
+function creatorListHref(eventId: string) {
+  return eventId ? `/creator?eventId=${encodeURIComponent(eventId)}` : "/creator";
+}
+
+function creatorNewHref(eventId: string) {
+  return `/creator?eventId=${encodeURIComponent(eventId)}&mode=new`;
+}
+
+function creatorImportHref(eventId: string) {
+  return `/creator?eventId=${encodeURIComponent(eventId)}&mode=bulk`;
+}
+
+function creatorEditHref(eventId: string, problemId: string) {
+  return `/creator?eventId=${encodeURIComponent(eventId)}&problemId=${encodeURIComponent(problemId)}`;
 }
 
 function ProblemForm({
@@ -583,16 +601,21 @@ function BulkImportPanel({ eventId, onDone }: { eventId: string; onDone: () => v
   );
 }
 
-type ActivePanel = "none" | "new" | "bulk";
-
-export default function CreatorPage() {
+function CreatorPageContent() {
   const { session, loading } = useAuth();
   const router = useRouter();
+  const searchParams = useSearchParams();
+  const eventIdParam = searchParams.get("eventId") ?? "";
+  const modeParam = searchParams.get("mode");
+  const editProblemId = searchParams.get("problemId");
+  const isNewPage = modeParam === "new";
+  const isBulkPage = modeParam === "bulk";
   const [events, setEvents] = useState<Event[]>([]);
   const [selectedEvent, setSelectedEvent] = useState<string>("");
   const [problems, setProblems] = useState<Problem[]>([]);
-  const [activePanel, setActivePanel] = useState<ActivePanel>("none");
   const [editProblem, setEditProblem] = useState<Problem | null>(null);
+  const [editProblemLoading, setEditProblemLoading] = useState(false);
+  const [editProblemError, setEditProblemError] = useState("");
   const [previewProblem, setPreviewProblem] = useState<Problem | null>(null);
   const [deleteConfirm, setDeleteConfirm] = useState<string | null>(null);
 
@@ -618,10 +641,21 @@ export default function CreatorPage() {
           }))
           .sort((a, b) => a.id.localeCompare(b.id));
         setEvents(loadedEvents);
-        if (loadedEvents[0]) setSelectedEvent(loadedEvents[0].id);
+        const requestedEvent = loadedEvents.find((event) => event.id === eventIdParam);
+        if (requestedEvent) {
+          setSelectedEvent(requestedEvent.id);
+        } else if (loadedEvents[0]) {
+          setSelectedEvent(loadedEvents[0].id);
+        }
       })
       .catch(() => {});
-  }, []);
+  }, [eventIdParam]);
+
+  useEffect(() => {
+    if (eventIdParam && events.some((event) => event.id === eventIdParam)) {
+      setSelectedEvent(eventIdParam);
+    }
+  }, [eventIdParam, events]);
 
   const reloadProblems = useCallback(() => {
     if (!selectedEvent) return;
@@ -659,6 +693,49 @@ export default function CreatorPage() {
     reloadProblems();
   }, [reloadProblems]);
 
+  useEffect(() => {
+    if (!selectedEvent || !editProblemId) {
+      setEditProblem(null);
+      setEditProblemError("");
+      setEditProblemLoading(false);
+      return;
+    }
+
+    let cancelled = false;
+    setEditProblem(null);
+    setEditProblemError("");
+    setEditProblemLoading(true);
+    fetch(`/api/events/${selectedEvent}/problems/${editProblemId}`)
+      .then(async (res) => {
+        if (!res.ok) throw new Error("問題を読み込めませんでした");
+        return (await res.json()) as Problem;
+      })
+      .then((problem) => {
+        if (cancelled) return;
+        setEditProblem({
+          ...problem,
+          testcases: (problem.testcases ?? []).map((tc: Testcase) => ({
+            ...tc,
+            clientId: tc.id ?? makeClientId(),
+          })),
+        });
+      })
+      .catch((error: unknown) => {
+        if (!cancelled) {
+          setEditProblemError(
+            error instanceof Error ? error.message : "問題を読み込めませんでした",
+          );
+        }
+      })
+      .finally(() => {
+        if (!cancelled) setEditProblemLoading(false);
+      });
+
+    return () => {
+      cancelled = true;
+    };
+  }, [selectedEvent, editProblemId]);
+
   async function togglePublish(problemId: string, current: boolean) {
     const res = await fetch(`/api/events/${selectedEvent}/problems/${problemId}`, {
       method: "PATCH",
@@ -676,14 +753,6 @@ export default function CreatorPage() {
     await fetch(`/api/events/${selectedEvent}/problems/${problemId}`, { method: "DELETE" });
     setProblems((ps) => ps.filter((p) => p.id !== problemId));
     setDeleteConfirm(null);
-  }
-
-  async function openEdit(problemId: string) {
-    const res = await fetch(`/api/events/${selectedEvent}/problems/${problemId}`);
-    if (!res.ok) return;
-    const problem = (await res.json()) as Problem;
-    setEditProblem(problem);
-    setActivePanel("none");
   }
 
   async function openPreview(problemId: string) {
@@ -708,7 +777,20 @@ export default function CreatorPage() {
 
   if (loading) return null;
 
-  const showingPanel = activePanel !== "none" || editProblem !== null;
+  const isFormPage = Boolean(selectedEvent && (isNewPage || editProblemId));
+
+  function handleEventChange(eventId: string) {
+    setSelectedEvent(eventId);
+    if (isNewPage) {
+      router.push(creatorNewHref(eventId));
+    } else if (isBulkPage) {
+      router.push(creatorImportHref(eventId));
+    } else if (editProblemId) {
+      router.push(creatorEditHref(eventId, editProblemId));
+    } else {
+      router.push(creatorListHref(eventId));
+    }
+  }
 
   return (
     <>
@@ -728,7 +810,7 @@ export default function CreatorPage() {
             <select
               id="event-selector"
               value={selectedEvent}
-              onChange={(e) => setSelectedEvent(e.target.value)}
+              onChange={(e) => handleEventChange(e.target.value)}
               className="input-field w-auto max-w-xs"
             >
               {events.map((e) => (
@@ -739,189 +821,194 @@ export default function CreatorPage() {
             </select>
           </div>
 
-          {/* New problem form */}
-          {activePanel === "new" && selectedEvent && (
-            <div className="card-surface p-6 mb-6">
-              <h2 className="font-display text-lg font-bold text-rp-100 mb-4">新規問題作成</h2>
+          {isNewPage && selectedEvent && (
+            <div className="card-surface p-6">
+              <div className="mb-5 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+                <h2 className="font-display text-lg font-bold text-rp-100">新規問題作成</h2>
+                <Link href={creatorListHref(selectedEvent)} className="btn-ghost w-fit">
+                  一覧に戻る
+                </Link>
+              </div>
               <ProblemForm
                 key="new"
                 eventId={selectedEvent}
                 onSave={() => {
-                  setActivePanel("none");
                   reloadProblems();
+                  router.push(creatorListHref(selectedEvent));
                 }}
-                onCancel={() => setActivePanel("none")}
+                onCancel={() => router.push(creatorListHref(selectedEvent))}
               />
             </div>
           )}
 
-          {/* Bulk import panel */}
-          {activePanel === "bulk" && selectedEvent && (
-            <div className="card-surface p-6 mb-6">
-              <h2 className="font-display text-lg font-bold text-rp-100 mb-4">一括インポート</h2>
+          {isBulkPage && selectedEvent && (
+            <div className="card-surface p-6">
+              <div className="mb-5 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+                <h2 className="font-display text-lg font-bold text-rp-100">一括インポート</h2>
+                <Link href={creatorListHref(selectedEvent)} className="btn-ghost w-fit">
+                  一覧に戻る
+                </Link>
+              </div>
               <BulkImportPanel
                 eventId={selectedEvent}
                 onDone={() => {
                   reloadProblems();
                 }}
               />
-              <button
-                type="button"
-                onClick={() => setActivePanel("none")}
-                className="btn-ghost mt-4 inline-flex items-center gap-1.5"
-              >
-                <X aria-hidden="true" size={15} />
-                閉じる
-              </button>
             </div>
           )}
 
-          {/* Edit form */}
-          {editProblem && (
-            <div className="card-surface p-6 mb-6">
-              <h2 className="font-display text-lg font-bold text-rp-100 mb-4">
-                問題を編集: {editProblem.id}
-              </h2>
-              <ProblemForm
-                key={editProblem.id}
-                eventId={selectedEvent}
-                initial={editProblem}
-                onSave={() => {
-                  setEditProblem(null);
-                  reloadProblems();
-                }}
-                onCancel={() => setEditProblem(null)}
-              />
+          {editProblemId && selectedEvent && (
+            <div className="card-surface p-6">
+              <div className="mb-5 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+                <h2 className="font-display text-lg font-bold text-rp-100">
+                  問題を編集: {editProblemId}
+                </h2>
+                <Link href={creatorListHref(selectedEvent)} className="btn-ghost w-fit">
+                  一覧に戻る
+                </Link>
+              </div>
+              {editProblemLoading && <p className="text-sm text-rp-muted">読み込み中...</p>}
+              {editProblemError && <p className="text-sm text-rp-accent">{editProblemError}</p>}
+              {editProblem && (
+                <ProblemForm
+                  key={editProblem.id}
+                  eventId={selectedEvent}
+                  initial={editProblem}
+                  onSave={() => {
+                    reloadProblems();
+                    router.push(creatorListHref(selectedEvent));
+                  }}
+                  onCancel={() => router.push(creatorListHref(selectedEvent))}
+                />
+              )}
             </div>
           )}
 
-          <div className="mb-4 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-            <h2 className="font-display text-lg font-bold text-rp-100">
-              {session?.role === "admin" ? "全問題" : "自分の問題"} ({myProblems.length})
-            </h2>
-            {!showingPanel && (
-              <div className="flex flex-wrap gap-2">
-                <button
-                  type="button"
-                  onClick={() => setActivePanel("bulk")}
-                  className="btn-ghost inline-flex items-center gap-1.5"
-                >
-                  <Upload aria-hidden="true" size={15} />
-                  一括インポート
-                </button>
-                <button
-                  type="button"
-                  onClick={() => setActivePanel("new")}
-                  className="btn-primary inline-flex items-center gap-1.5"
-                >
-                  <FilePlus2 aria-hidden="true" size={15} />
-                  新規問題
-                </button>
+          {isFormPage || isBulkPage ? null : (
+            <>
+              <div className="mb-4 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+                <h2 className="font-display text-lg font-bold text-rp-100">
+                  {session?.role === "admin" ? "全問題" : "自分の問題"} ({myProblems.length})
+                </h2>
+                <div className="flex flex-wrap gap-2">
+                  <Link
+                    href={creatorImportHref(selectedEvent)}
+                    className="btn-ghost inline-flex items-center gap-1.5"
+                  >
+                    <Upload aria-hidden="true" size={15} />
+                    一括インポート
+                  </Link>
+                  <Link
+                    href={creatorNewHref(selectedEvent)}
+                    className="btn-primary inline-flex items-center gap-1.5"
+                  >
+                    <FilePlus2 aria-hidden="true" size={15} />
+                    新規問題
+                  </Link>
+                </div>
               </div>
-            )}
-          </div>
 
-          {myProblems.length === 0 ? (
-            <div className="card-surface p-12 text-center">
-              <p className="text-rp-muted mb-4">問題がありません</p>
-              <div className="flex gap-2 justify-center">
-                <button
-                  type="button"
-                  onClick={() => setActivePanel("bulk")}
-                  className="btn-ghost inline-flex items-center gap-1.5"
-                >
-                  <Upload aria-hidden="true" size={15} />
-                  一括インポート
-                </button>
-                <button
-                  type="button"
-                  onClick={() => setActivePanel("new")}
-                  className="btn-primary inline-flex items-center gap-1.5"
-                >
-                  <FilePlus2 aria-hidden="true" size={15} />
-                  最初の問題を作成
-                </button>
-              </div>
-            </div>
-          ) : (
-            <div className="space-y-2">
-              {myProblems.map((p) => (
-                <div
-                  key={p.id}
-                  className="card-surface flex flex-col gap-3 px-4 py-4 sm:flex-row sm:items-center sm:gap-4 sm:px-5"
-                >
-                  <div className="flex-shrink-0 w-10 h-10 rounded-lg bg-rp-700 flex items-center justify-center">
-                    <span className="font-mono text-xs font-bold text-rp-300">{p.id}</span>
-                  </div>
-                  <div className="flex-1 min-w-0">
-                    <div className="flex min-w-0 items-center gap-2">
-                      <span className="min-w-0 flex-1 truncate font-display text-sm font-semibold text-rp-100">
-                        {p.title}
-                      </span>
-                      <button
-                        type="button"
-                        onClick={() => void togglePublish(p.id, p.isPublished)}
-                        className={`shrink-0 text-[10px] font-mono px-1.5 py-0.5 rounded border cursor-pointer transition-opacity hover:opacity-70 ${
-                          p.isPublished ? "badge-live" : "border-rp-muted/30 text-rp-muted"
-                        }`}
-                      >
-                        {p.isPublished ? "LIVE" : "DRAFT"}
-                      </button>
-                    </div>
-                    <p className="font-mono text-xs text-rp-muted mt-0.5">
-                      更新: {new Date(p.updatedAt).toLocaleDateString("ja-JP")}
-                    </p>
-                  </div>
-                  <div className="flex shrink-0 flex-wrap items-center gap-2 sm:justify-end">
-                    <button
-                      type="button"
-                      onClick={() => void openPreview(p.id)}
-                      className="btn-ghost inline-flex items-center gap-1.5 py-1.5 px-3 text-xs"
+              {myProblems.length === 0 ? (
+                <div className="card-surface p-12 text-center">
+                  <p className="text-rp-muted mb-4">問題がありません</p>
+                  <div className="flex gap-2 justify-center">
+                    <Link
+                      href={creatorImportHref(selectedEvent)}
+                      className="btn-ghost inline-flex items-center gap-1.5"
                     >
-                      <Eye aria-hidden="true" size={13} />
-                      表示
-                    </button>
-                    <button
-                      type="button"
-                      onClick={() => void openEdit(p.id)}
-                      className="btn-ghost inline-flex items-center gap-1.5 py-1.5 px-3 text-xs"
+                      <Upload aria-hidden="true" size={15} />
+                      一括インポート
+                    </Link>
+                    <Link
+                      href={creatorNewHref(selectedEvent)}
+                      className="btn-primary inline-flex items-center gap-1.5"
                     >
-                      <Pencil aria-hidden="true" size={13} />
-                      編集
-                    </button>
-                    {deleteConfirm === p.id ? (
-                      <div className="flex items-center gap-1">
-                        <button
-                          type="button"
-                          onClick={() => void deleteProblem(p.id)}
-                          className="inline-flex items-center gap-1.5 text-xs px-3 py-1.5 rounded bg-rp-accent text-white hover:opacity-90 transition-opacity"
-                        >
-                          <Trash2 aria-hidden="true" size={13} />
-                          削除確認
-                        </button>
-                        <button
-                          type="button"
-                          onClick={() => setDeleteConfirm(null)}
-                          className="btn-ghost inline-flex items-center py-1.5 px-2 text-xs"
-                          aria-label="キャンセル"
-                        >
-                          <X aria-hidden="true" size={13} />
-                        </button>
-                      </div>
-                    ) : (
-                      <button
-                        type="button"
-                        onClick={() => setDeleteConfirm(p.id)}
-                        className="btn-ghost inline-flex items-center gap-1.5 py-1.5 px-3 text-xs text-rp-accent border-rp-accent/30 hover:bg-rp-accent/10"
-                      >
-                        <Trash2 aria-hidden="true" size={13} />
-                        削除
-                      </button>
-                    )}
+                      <FilePlus2 aria-hidden="true" size={15} />
+                      最初の問題を作成
+                    </Link>
                   </div>
                 </div>
-              ))}
-            </div>
+              ) : (
+                <div className="space-y-2">
+                  {myProblems.map((p) => (
+                    <div
+                      key={p.id}
+                      className="card-surface flex flex-col gap-3 px-4 py-4 sm:flex-row sm:items-center sm:gap-4 sm:px-5"
+                    >
+                      <div className="flex-shrink-0 w-10 h-10 rounded-lg bg-rp-700 flex items-center justify-center">
+                        <span className="font-mono text-xs font-bold text-rp-300">{p.id}</span>
+                      </div>
+                      <div className="flex-1 min-w-0">
+                        <div className="flex min-w-0 items-center gap-2">
+                          <span className="min-w-0 flex-1 truncate font-display text-sm font-semibold text-rp-100">
+                            {p.title}
+                          </span>
+                          <button
+                            type="button"
+                            onClick={() => void togglePublish(p.id, p.isPublished)}
+                            className={`shrink-0 text-[10px] font-mono px-1.5 py-0.5 rounded border cursor-pointer transition-opacity hover:opacity-70 ${
+                              p.isPublished ? "badge-live" : "border-rp-muted/30 text-rp-muted"
+                            }`}
+                          >
+                            {p.isPublished ? "LIVE" : "DRAFT"}
+                          </button>
+                        </div>
+                        <p className="font-mono text-xs text-rp-muted mt-0.5">
+                          更新: {new Date(p.updatedAt).toLocaleDateString("ja-JP")}
+                        </p>
+                      </div>
+                      <div className="flex shrink-0 flex-wrap items-center gap-2 sm:justify-end">
+                        <button
+                          type="button"
+                          onClick={() => void openPreview(p.id)}
+                          className="btn-ghost inline-flex items-center gap-1.5 py-1.5 px-3 text-xs"
+                        >
+                          <Eye aria-hidden="true" size={13} />
+                          表示
+                        </button>
+                        <Link
+                          href={creatorEditHref(selectedEvent, p.id)}
+                          className="btn-ghost inline-flex items-center gap-1.5 py-1.5 px-3 text-xs"
+                        >
+                          <Pencil aria-hidden="true" size={13} />
+                          編集
+                        </Link>
+                        {deleteConfirm === p.id ? (
+                          <div className="flex items-center gap-1">
+                            <button
+                              type="button"
+                              onClick={() => void deleteProblem(p.id)}
+                              className="inline-flex items-center gap-1.5 text-xs px-3 py-1.5 rounded bg-rp-accent text-white hover:opacity-90 transition-opacity"
+                            >
+                              <Trash2 aria-hidden="true" size={13} />
+                              削除確認
+                            </button>
+                            <button
+                              type="button"
+                              onClick={() => setDeleteConfirm(null)}
+                              className="btn-ghost inline-flex items-center py-1.5 px-2 text-xs"
+                              aria-label="キャンセル"
+                            >
+                              <X aria-hidden="true" size={13} />
+                            </button>
+                          </div>
+                        ) : (
+                          <button
+                            type="button"
+                            onClick={() => setDeleteConfirm(p.id)}
+                            className="btn-ghost inline-flex items-center gap-1.5 py-1.5 px-3 text-xs text-rp-accent border-rp-accent/30 hover:bg-rp-accent/10"
+                          >
+                            <Trash2 aria-hidden="true" size={13} />
+                            削除
+                          </button>
+                        )}
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </>
           )}
         </div>
       </main>
@@ -929,5 +1016,13 @@ export default function CreatorPage() {
         <ProblemPreview problem={previewProblem} onClose={() => setPreviewProblem(null)} />
       )}
     </>
+  );
+}
+
+export default function CreatorPage() {
+  return (
+    <Suspense fallback={null}>
+      <CreatorPageContent />
+    </Suspense>
   );
 }
