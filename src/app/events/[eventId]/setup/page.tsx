@@ -1,15 +1,50 @@
-import { SetupCodeBlock } from "@/components/setup/SetupCodeBlock";
-import { SetupTokenSection } from "@/components/setup/SetupTokenSection";
-import { getSession } from "@/lib/auth/session";
+"use client";
 
-interface PageProps {
-  params: Promise<{ eventId: string }>;
+import { useParams } from "next/navigation";
+import { useEffect, useState } from "react";
+import { CodeBlock } from "@/components/ui/CodeBlock";
+import { useAuth } from "@/contexts/AuthContext";
+
+interface SetupTokenSectionProps {
+  eventId: string;
+  isSolver: boolean;
 }
 
-export default async function SetupPage({ params }: PageProps) {
-  const { eventId: _rawEventId } = await params;
-  const eventId = decodeURIComponent(_rawEventId);
-  const session = await getSession();
+function SetupTokenSection({ eventId, isSolver }: SetupTokenSectionProps) {
+  const [token, setToken] = useState<string | null>(null);
+  const [, setFetched] = useState(false);
+
+  useEffect(() => {
+    if (!isSolver) {
+      setFetched(true);
+      return;
+    }
+    fetch(`/api/events/${encodeURIComponent(eventId)}/token`)
+      .then((r) => r.json() as Promise<{ token: string | null; teamName: string | null }>)
+      .then((d) => {
+        setToken(d.token);
+      })
+      .catch(() => {})
+      .finally(() => setFetched(true));
+  }, [eventId, isSolver]);
+
+  const configJson = JSON.stringify({ eventId, token: token ?? "rj_live_XXXX..." }, null, 2);
+
+  return (
+    <section>
+      <h2 className="text-sm font-semibold text-rp-100 mb-2">
+        4. 設定ファイル (.rippro-judge.json)
+      </h2>
+      <p className="text-sm text-rp-muted mb-2">提出作業ディレクトリに配置。</p>
+      <CodeBlock code={configJson} />
+    </section>
+  );
+}
+
+export default function SetupPage() {
+  const { eventId: rawEventId } = useParams<{ eventId: string }>();
+  const eventId = decodeURIComponent(rawEventId);
+  const { session } = useAuth();
   const isSolver = session?.role === "solver";
 
   return (
@@ -20,25 +55,24 @@ export default async function SetupPage({ params }: PageProps) {
       <div className="space-y-8">
         <section>
           <h2 className="text-sm font-semibold text-rp-100 mb-2">1. インストール</h2>
-          <SetupCodeBlock code="npm install -g @rippro/judge@latest" />
+          <CodeBlock code="npm install -g @rippro/judge@latest" />
         </section>
 
         <section>
           <h2 className="text-sm font-semibold text-rp-100 mb-2">2. ログイン</h2>
-          <SetupCodeBlock code={`Teamsタブでチームを作成、または既存のチームに、招待コードを入力することで参加`} />
+          <CodeBlock code="Teamsタブでチームを作成、または既存のチームに、招待コードを入力することで参加" />
         </section>
 
         <section>
           <h2 className="text-sm font-semibold text-rp-100 mb-2">3. 初期化</h2>
-          <SetupCodeBlock code={`rj init`} />
+          <CodeBlock code="rj init" />
         </section>
-
 
         <SetupTokenSection eventId={eventId} isSolver={isSolver} />
 
         <section>
-          <h2 className="text-sm font-semibold text-rp-100 mb-2">4. 提出</h2>
-          <SetupCodeBlock code={`rj submit H7CA solution.cpp\nrj submit H7CA solution.py`} />
+          <h2 className="text-sm font-semibold text-rp-100 mb-2">5. 提出</h2>
+          <CodeBlock code={`rj submit H7CA solution.cpp\nrj submit H7CA solution.py`} />
         </section>
 
         {(session?.role === "admin" || session?.role === "creator") && (
