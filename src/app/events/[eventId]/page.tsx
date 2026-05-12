@@ -25,11 +25,10 @@ interface PageProps {
 async function getEventData(eventId: string) {
   try {
     const db = getAdminFirestore();
-    const [eventSnap, problemsSnap, teamsSnap, submissionsSnap, solvesSnap] = await Promise.all([
+    const [eventSnap, problemsSnap, teamsSnap, solvesSnap] = await Promise.all([
       db.collection("events").doc(eventId).get(),
       db.collection("problems").where("eventId", "==", eventId).get(),
       db.collection("teams").where("eventId", "==", eventId).get(),
-      db.collection("submissions").where("eventId", "==", eventId).get(),
       db.collection("solves").where("eventId", "==", eventId).get(),
     ]);
 
@@ -45,7 +44,6 @@ async function getEventData(eventId: string) {
       problemCount: problemsSnap.size,
       publishedCount: problemsSnap.docs.filter((p) => p.data().isPublished).length,
       teamCount: teamsSnap.size,
-      submissionCount: submissionsSnap.size,
       solveCount: solvesSnap.size,
     };
   } catch {
@@ -72,7 +70,6 @@ export default async function EventHomePage({ params }: PageProps) {
   const stats = [
     { label: "公開問題", value: event.publishedCount, total: event.problemCount },
     { label: "チーム", value: event.teamCount },
-    { label: "提出数", value: event.submissionCount },
     { label: "AC 数", value: event.solveCount },
   ];
 
@@ -111,7 +108,7 @@ export default async function EventHomePage({ params }: PageProps) {
       </div>
 
       {/* Stats */}
-      <div className="bg-rp-border grid grid-cols-2 sm:grid-cols-4 gap-px rounded-lg overflow-hidden mb-10">
+      <div className="bg-rp-border grid grid-cols-2 sm:grid-cols-3 gap-px rounded-lg overflow-hidden mb-10">
         {stats.map((s) => (
           <div key={s.label} className="bg-rp-900 px-6 py-6">
             <div
@@ -129,14 +126,9 @@ export default async function EventHomePage({ params }: PageProps) {
       </div>
 
       {/* Quick links */}
-      <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
+      <div className="grid gap-3 sm:grid-cols-3">
         {[
           { href: `/events/${eventId}/problems`, label: "Problems", desc: "問題一覧と詳細" },
-          {
-            href: `/events/${eventId}/submissions`,
-            label: "Submissions",
-            desc: "提出履歴と AC 一覧",
-          },
           { href: `/events/${eventId}/teams`, label: "Teams", desc: "チームランキング" },
           { href: `/events/${eventId}/setup`, label: "Setup", desc: "CLI セットアップガイド" },
         ].map((link) => (

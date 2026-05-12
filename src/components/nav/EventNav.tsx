@@ -11,7 +11,6 @@ const tabs = [
   { key: "home", label: "Overview", href: (id: string) => `/events/${id}` },
   { key: "problems", label: "Problems", href: (id: string) => `/events/${id}/problems` },
   { key: "teams", label: "Teams", href: (id: string) => `/events/${id}/teams` },
-  { key: "settings", label: "Settings", href: (id: string) => `/events/${id}/settings` },
   { key: "setup", label: "Setup", href: (id: string) => `/events/${id}/setup` },
 ];
 

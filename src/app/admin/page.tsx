@@ -1,7 +1,7 @@
 "use client";
 
 import { collection, getDocs } from "firebase/firestore";
-import { Eye, Pencil, Plus, Settings, Trash2, UserPlus, X } from "lucide-react";
+import { Eye, Pencil, Plus, Trash2, UserPlus, X } from "lucide-react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
@@ -424,13 +424,6 @@ export default function AdminPage() {
                       >
                         <Eye aria-hidden="true" size={13} />
                         表示
-                      </Link>
-                      <Link
-                        href={`/events/${e.id}/settings`}
-                        className="btn-ghost inline-flex items-center gap-1.5 py-1.5 px-3 text-xs"
-                      >
-                        <Settings aria-hidden="true" size={13} />
-                        設定
                       </Link>
                       {deleteEventConfirm === e.id ? (
                         <>
